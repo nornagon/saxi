@@ -43,6 +43,26 @@ class OpenEBB(port: SerialPort) {
     }
   }
 
+  def enableMotors(microsteppingMode: Int): Unit = {
+    require(
+      1 <= microsteppingMode && microsteppingMode <= 5,
+      s"Microstepping mode must be between 1 and 5, but was $microsteppingMode"
+    )
+    command(s"EM,$microsteppingMode,$microsteppingMode")
+  }
+
+  def disableMotors(): Unit = command("EM,0,0")
+
+  def raisePen(duration: Int): Unit = {
+    require(duration >= 0)
+    command(s"SP,0,$duration")
+  }
+
+  def lowerPen(duration: Int): Unit = {
+    require(duration >= 0)
+    command(s"SP,1,$duration")
+  }
+
   def lowlevelMove(
     stepsAxis1: Long,
     initialStepsPerSecAxis1: Double,
@@ -156,6 +176,48 @@ class OpenEBB(port: SerialPort) {
       moveAtConstantRate(timestepSec, sx, sy)
       t += timestepSec
     }
+  }
+
+  def waitUntilMotorsIdle(): Unit = {
+    Iterator.continually { query("QM") }.find(_.split(",") match {
+      case Array("QM", commandStatus, motor1Status, motor2Status, fifoStatus) =>
+        commandStatus == "0" && fifoStatus == "0"
+    })
+  }
+
+  /**
+    * Query voltages for board & steppers. Useful to check whether stepper power is plugged in.
+    *
+    * @return Tuple of (RA0_VOLTAGE, V+_VOLTAGE, VIN_VOLTAGE)
+    */
+  def queryVoltages(): (Double, Double, Double) = {
+    val Array(ra0Voltage, vPlusVoltage) = queryM("QC").head.split(",")
+    (
+      ra0Voltage.toInt / 1023.0 * 3.3,
+      vPlusVoltage.toInt / 1023.0 * 3.3,
+      vPlusVoltage.toInt / 1023.0 * 3.3 * 9.2 + 0.3
+    )
+  }
+
+  def areSteppersPowered(): Boolean = {
+    val (_, _, vInVoltage) = queryVoltages()
+    vInVoltage > 6
+  }
+
+  /**
+    * Query the firmware version running on the EBB.
+    *
+    * @return The version string, e.g. "Version: EBBv13_and_above EB Firmware Version 2.5.3"
+    */
+  def firmwareVersion(): String = query("V")
+
+  /**
+    * @return true iff the EBB firmware supports the LM command.
+    */
+  def supportsLM(): Boolean = {
+    val Array(major, minor, patch) = firmwareVersion().split(" ").last.split("\\.").map(_.toInt)
+    import scala.math.Ordering.Implicits._
+    (major, minor, patch) >= (2, 5, 3)
   }
 }
 
