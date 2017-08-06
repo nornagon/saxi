@@ -8,6 +8,9 @@ object Planning {
   case class Instant(t: Double, p: Vec2, s: Double, v: Double, a: Double)
 
   case class Block(accel: Double, duration: Double, vInitial: Double, p1: Vec2, p2: Vec2) {
+    require(vInitial + accel * duration >= -epsilon, s"vFinal must be >= 0, but vInitial=$vInitial, duration=$duration, accel=$accel")
+    def vFinal: Double = math.max(0, vInitial + accel * duration)
+    require(vInitial >= 0, s"vInitial must be >= 0, but was $vInitial")
     val distance: Double = (p1 - p2).length
     def instant(tU: Double, dt: Double=0, ds: Double=0): Instant = {
       val t = math.max(0, math.min(duration, tU))
@@ -49,12 +52,14 @@ object Planning {
   def cornerVelocity(seg1: Segment, seg2: Segment, vMax: Double, accel: Double, cornerFactor: Double): Double = {
     // https://onehossshay.wordpress.com/2011/09/24/improving_grbl_cornering_algorithm/
     val cosine = -seg1.direction.dot(seg2.direction)
+    assert(!cosine.isNaN, s"cosine was NaN: $seg1, $seg2, ${seg1.direction}, ${seg2.direction}")
     if (math.abs(cosine - 1) < epsilon)
       return 0
     val sine = math.sqrt((1 - cosine) / 2)
     if (math.abs(sine - 1) < epsilon)
       return vMax
     val v = math.sqrt((accel * cornerFactor * sine) / (1 - sine))
+    assert(!v.isNaN, s"v was NaN: $accel, $cornerFactor, $sine")
     math.min(v, vMax)
   }
 
@@ -92,11 +97,16 @@ object Planning {
       * @return
       */
     def compute(distance: Double, initialVel: Double, finalVel: Double, accel: Double, p1: Vec2, p3: Vec2): Triangle = {
+      require(!finalVel.isNaN, s"finalVel was NaN")
       val acceleratingDistance = (2 * accel * distance + finalVel * finalVel - initialVel * initialVel) / (4 * accel)
+      assert(!acceleratingDistance.isNaN, s"acceleratingDistance was NaN: $accel, $distance, $finalVel, $initialVel")
       val deceleratingDistance = distance - acceleratingDistance
       val vMax = math.sqrt(initialVel * initialVel + 2 * accel * acceleratingDistance)
+      assert(!vMax.isNaN, s"vMax was NaN: $initialVel, $accel, $acceleratingDistance")
       val t1 = (vMax - initialVel) / accel
       val t2 = (finalVel - vMax) / -accel
+      assert(!t1.isNaN, s"t1 was NaN: $vMax $initialVel $accel")
+      assert(!t2.isNaN, s"t2 was NaN: $vMax $finalVel $accel")
       val p2 = p1 + (p3 - p1).norm * acceleratingDistance
       Triangle(acceleratingDistance, deceleratingDistance, t1, t2, vMax, p1, p2, p3)
     }
@@ -122,10 +132,19 @@ object Planning {
     }
   }
 
+  /**
+    * Plan a path, using a constant acceleration profile.
+    * @param points Sequence of points to pass through
+    * @param accel Acceleration, in full steps per second per second
+    * @param vMax Maximum velocity, in full steps per second
+    * @param cornerFactor Affects how hard to accelerate around corners; units are full steps
+    * @return A plan of action
+    */
   def constantAccelerationPlan(points: Seq[Vec2], accel: Double, vMax: Double, cornerFactor: Double): Plan = {
     var segments = points.sliding(2).map { case Seq(a, b) => Segment(a, b) }.toSeq
     for ((s1, s2) <- segments.zip(segments.tail)) {
       s2.maxEntryVelocity = cornerVelocity(s1, s2, vMax, accel, cornerFactor)
+      assert(!s2.maxEntryVelocity.isNaN, s"cornerVel was NaN: $s1, $s2, $vMax, $accel, $cornerFactor")
     }
 
     segments = segments :+ Segment(points.last, points.last)

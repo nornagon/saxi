@@ -10,6 +10,14 @@ import saxi.Planning.Plan
 class OpenEBB(port: SerialPort) {
   // TODO: this doesn't handle the ebb's weird \n\r thing. Maybe use scanner instead?
   private val in = new BufferedReader(new InputStreamReader(port.getInputStream))
+  private var microsteppingMode: Int = 0
+  private def stepMultiplier = microsteppingMode match {
+    case 5 => 1
+    case 4 => 2
+    case 3 => 4
+    case 2 => 8
+    case 1 => 16
+  }
 
   private def readLine(): String = {
     val line = Iterator.continually(in.readLine().stripLineEnd).find(_.nonEmpty).get
@@ -49,6 +57,7 @@ class OpenEBB(port: SerialPort) {
       s"Microstepping mode must be between 1 and 5, but was $microsteppingMode"
     )
     command(s"EM,$microsteppingMode,$microsteppingMode")
+    this.microsteppingMode = microsteppingMode
   }
 
   def disableMotors(): Unit = command("EM,0,0")
@@ -92,7 +101,7 @@ class OpenEBB(port: SerialPort) {
     */
   def moveWithAcceleration(xSteps: Long, ySteps: Long, initialRate: Double, finalRate: Double): Unit = {
     require(xSteps != 0 || ySteps != 0, "Must move on at least one axis")
-    require(initialRate >= 0 && finalRate >= 0, "Rates must be positive")
+    require(initialRate >= 0 && finalRate >= 0, s"Rates must be positive, were $initialRate,$finalRate")
     require(initialRate > 0 || finalRate > 0, "Must have non-zero velocity during motion")
     val stepsAxis1: Long = ((xSteps + ySteps) * rotFactor).round
     val stepsAxis2: Long = ((xSteps - ySteps) * rotFactor).round
@@ -132,8 +141,8 @@ class OpenEBB(port: SerialPort) {
     * Use the high-level move command "XM" to perform a constant-velocity stepper move.
     *
     * @param duration Duration of the move, in seconds
-    * @param x Number of steps to move in the X direction
-    * @param y Number of steps to move in the Y direction
+    * @param x Number of microsteps to move in the X direction
+    * @param y Number of microsteps to move in the Y direction
     */
   def moveAtConstantRate(duration: Double, x: Long, y: Long): Unit = {
     command(s"XM,${(duration * 1000).toLong},$x,$y")
@@ -145,24 +154,24 @@ class OpenEBB(port: SerialPort) {
     (fracPart, intPart)
   }
 
-  def executePlan(plan: Plan, stepsPerUnit: Double): Unit = {
+  def executePlan(plan: Plan): Unit = {
     var error = Vec2(0, 0)
     for (block <- plan.blocks) {
-      val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepsPerUnit + error.x)
-      val (errY, stepsY) = modf((block.p2.y - block.p1.y) * stepsPerUnit + error.y)
+      val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepMultiplier + error.x)
+      val (errY, stepsY) = modf((block.p2.y - block.p1.y) * stepMultiplier + error.y)
       error = Vec2(errX, errY)
       if (stepsX != 0 || stepsY != 0) {
         moveWithAcceleration(
           stepsX,
           stepsY,
-          block.vInitial * stepsPerUnit,
-          (block.vInitial + block.accel * block.duration) * stepsPerUnit
+          block.vInitial * stepMultiplier,
+          block.vFinal * stepMultiplier
         )
       }
     }
   }
 
-  def executePlanWithoutLM(plan: Plan, stepsPerUnit: Double): Unit = {
+  def executePlanWithoutLM(plan: Plan): Unit = {
     val timestepSec = 15 / 1000d
     var error = Vec2(0, 0)
     var t = 0d
@@ -170,8 +179,8 @@ class OpenEBB(port: SerialPort) {
       val i1 = plan.instant(t)
       val i2 = plan.instant(t + timestepSec)
       val d = i2.p - i1.p
-      val (ex, sx) = modf(d.x * stepsPerUnit + error.x)
-      val (ey, sy) = modf(d.y * stepsPerUnit + error.y)
+      val (ex, sx) = modf(d.x * stepMultiplier + error.x)
+      val (ey, sy) = modf(d.y * stepMultiplier + error.y)
       error = Vec2(ex, ey)
       moveAtConstantRate(timestepSec, sx, sy)
       t += timestepSec
