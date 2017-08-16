@@ -215,6 +215,30 @@ class OpenEBB(port: SerialPort) {
     }
   }
 
+  // TODO: pass in a ToolingProfile for penup
+  def plot(plannedPaths: Seq[Plan], microsteppingMode: Int = 2, penupMaxVel: Int = 200 * 5, penupAccel: Int = 400 * 5): Unit = {
+    val executePlan = if (supportsLM()) this.executePlan _ else this.executePlanWithoutLM _
+    var curPos = Vec2(0, 0)
+
+    def moveWithPenUp(from: Vec2, to: Vec2): Unit = {
+      val penUpPlan = Planning.constantAccelerationPlan(
+        Seq(from, to), accel = penupAccel, vMax = penupMaxVel, cornerFactor = 0)
+      executePlan(penUpPlan)
+    }
+
+    enableMotors(microsteppingMode)
+
+    raisePen()
+    for (plan <- plannedPaths) {
+      moveWithPenUp(from = curPos, to = plan.blocks.head.p1)
+      lowerPen()
+      executePlan(plan)
+      raisePen()
+      curPos = plan.blocks.last.p2
+    }
+    moveWithPenUp(from = curPos, to = Vec2(0, 0))
+  }
+
   def waitUntilMotorsIdle(): Unit = {
     Iterator.continually { query("QM") }.find(_.split(",") match {
       case Array("QM", commandStatus, motor1Status, motor2Status, fifoStatus) =>

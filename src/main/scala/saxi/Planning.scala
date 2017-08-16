@@ -135,6 +135,9 @@ object Planning {
     }
   }
 
+  def constantAccelerationPlan(points: Seq[Vec2], profile: ToolingProfile): Plan =
+    constantAccelerationPlan(points, profile.acceleration, profile.maximumVelocity, profile.corneringFactor)
+
   /**
     * Plan a path, using a constant acceleration profile.
     * @param points Sequence of points to pass through
@@ -201,5 +204,14 @@ object Planning {
     }
     val blocks: Seq[Block] = segments.flatMap(_.blocks).filter(_.duration > epsilon)
     Plan(blocks.toList)
+  }
+
+  def plan(
+    paths: Seq[Seq[Vec2]],
+    profile: ToolingProfile
+  ): Seq[Plan] = {
+    paths.map { path =>
+      Planning.constantAccelerationPlan(path, profile)
+    }
   }
 }
