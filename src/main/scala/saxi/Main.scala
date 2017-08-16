@@ -146,12 +146,12 @@ object Main {
 
     ebb.enableMotors(microsteppingMode)
 
-    ebb.raisePen(400)
+    ebb.raisePen()
     for (plan <- plannedPaths) {
       moveWithPenUp(from = curPos, to = plan.blocks.head.p1)
-      ebb.lowerPen(100)
+      ebb.lowerPen()
       executePlan(plan)
-      ebb.raisePen(100)
+      ebb.raisePen()
       curPos = plan.blocks.last.p2
     }
     moveWithPenUp(from = curPos, to = Vec2(0, 0))
@@ -173,9 +173,10 @@ object Main {
         println("[ERROR] AxiDraw does not appear to have servo power.")
         return
       }
+      ebb.configure(penUpPct = 50, penDownPct = 60)
 
-      ebb.enableMotors(5)
-      ebb.raisePen(200)
+      ebb.enableMotors(microsteppingMode = 5)
+      ebb.raisePen()
       ebb.disableMotors()
       println("Pen up and motors disabled, move to home.")
       println("Press [enter] to plot.")

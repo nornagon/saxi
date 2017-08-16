@@ -11,6 +11,11 @@ class OpenEBB(port: SerialPort) {
   // TODO: this doesn't handle the ebb's weird \n\r thing. Maybe use scanner instead?
   private val in = new BufferedReader(new InputStreamReader(port.getInputStream))
   private var microsteppingMode: Int = 0
+  // See https://github.com/evil-mad/EggBot/blob/399e9130d1b7e340bb084794718ec2309688d9c6/EBB_firmware/app.X/source/RCServo2.c for defaults
+  private var penDownPos: Int = 16000
+  private var penUpPos: Int = 12000
+  private var penDownSpeed: Int = 400
+  private var penUpSpeed: Int = 400
   private def stepMultiplier = microsteppingMode match {
     case 5 => 1
     case 4 => 2
@@ -18,6 +23,8 @@ class OpenEBB(port: SerialPort) {
     case 2 => 8
     case 1 => 16
   }
+  private def msForPenToGoUp: Int = ((penUpPos - penDownPos).abs / penUpSpeed.toDouble * 24).round.toInt
+  private def msForPenToGoDown: Int = ((penUpPos - penDownPos).abs / penDownSpeed.toDouble * 24).round.toInt
 
   private def readLine(): String = {
     val line = Iterator.continually(in.readLine().stripLineEnd).find(_.nonEmpty).get
@@ -51,6 +58,8 @@ class OpenEBB(port: SerialPort) {
     }
   }
 
+  def reset(): Unit = { command("R"); readLine() /* R seems to send two OK packets? */ }
+
   def enableMotors(microsteppingMode: Int): Unit = {
     require(
       1 <= microsteppingMode && microsteppingMode <= 5,
@@ -62,14 +71,33 @@ class OpenEBB(port: SerialPort) {
 
   def disableMotors(): Unit = command("EM,0,0")
 
-  def raisePen(duration: Int): Unit = {
-    require(duration >= 0)
-    command(s"SP,0,$duration")
+  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
+  // Units: 83ns resolution pwm output.
+  // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
+  val PenServoMin: Int = 7500
+  val PenServoMax: Int = 28000
+  // speeds are in 83ns per 24ms. So moving from top to bottom = 20500 steps would take 492 sec at rate=1, 4.9 sec at
+  // rate 100.
+  def configure(penUpPct: Double, penDownPct: Double, penUpSpeedPctPerSec: Double = 150, penDownSpeedPctPerSec: Double = 150): Unit = {
+    val clocksPerPct = (PenServoMax - PenServoMin) / 100.0
+    this.penUpPos = (PenServoMax - penUpPct * clocksPerPct).round.toInt
+    this.penDownPos = (PenServoMax - penDownPct * clocksPerPct).round.toInt
+    this.penUpSpeed = (penUpSpeedPctPerSec * (24 / 1000.0) * clocksPerPct).round.toInt
+    this.penDownSpeed = (penDownSpeedPctPerSec * (24 / 1000.0) * clocksPerPct).round.toInt
+    command(s"SC,4,$penUpPos")
+    command(s"SC,5,$penDownPos")
+    command(s"SC,11,$penUpSpeed")
+    command(s"SC,12,$penDownSpeed")
   }
 
-  def lowerPen(duration: Int): Unit = {
+  def raisePen(duration: Int = msForPenToGoUp): Unit = {
     require(duration >= 0)
     command(s"SP,1,$duration")
+  }
+
+  def lowerPen(duration: Int = msForPenToGoDown): Unit = {
+    require(duration >= 0)
+    command(s"SP,0,$duration")
   }
 
   def lowlevelMove(
@@ -191,6 +219,7 @@ class OpenEBB(port: SerialPort) {
     Iterator.continually { query("QM") }.find(_.split(",") match {
       case Array("QM", commandStatus, motor1Status, motor2Status, fifoStatus) =>
         commandStatus == "0" && fifoStatus == "0"
+      case s => println(s"Unexpected string ${s.toList}"); false
     })
   }
 
