@@ -2,6 +2,9 @@ package saxi
 
 import scala.collection.Searching
 
+/**
+  * Cribbed from https://github.com/fogleman/axi/blob/master/axi/planner.py
+  */
 object Planning {
   val epsilon: Double = 1e-9
 

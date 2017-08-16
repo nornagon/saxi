@@ -10,23 +10,6 @@ import scala.collection.mutable
 object Main {
   val fullStepsPerInch: Int = 127
   val fullStepsPerMm: Int = 5
-  /*
-  // 5 = full step mode, 4 = 1/2 step, 3 = 1/4 step, 2 = 1/8 step, 1 = 1/16 step
-  val microsteppingMode: Int = 2
-  val stepDivider: Int = 1 << (microsteppingMode - 1)
-  val stepsPerInch: Int = (fullStepsPerInch * 16) / stepDivider
-  val stepsPerMm: Int = (fullStepsPerMm * 16) / stepDivider
-  */
-  def choose(n: Int, k: Int): Int = {
-    if (n - k < k) choose(n, n-k)
-    var r = 1
-    var i = 1
-    while (i <= k) {
-      r *= (n - (k - i)) / i
-      i += 1
-    }
-    r
-  }
 
   def joinNearby(pointLists: Seq[Seq[Vec2]]): Seq[Seq[Vec2]] = {
     def maybeJoin(a: Seq[Vec2], b: Seq[Vec2]): Seq[Seq[Vec2]] = {
@@ -44,7 +27,6 @@ object Main {
   }
 
   def optimize(pointLists: Seq[Seq[Vec2]]): Seq[Seq[Vec2]] = {
-    val macroPlanningPoints: Array[Vec2] = pointLists.flatMap(ps => Seq(ps.head, ps.last))(collection.breakOut)
     // The distance between macro planning points i and j is given by
     // pointDists((n C 2) - (n-i C 2) + (j - i - 1))
     // where n is the # of points
@@ -67,7 +49,7 @@ object Main {
     visited.add(firstIdx)
     sortedPointLists.append(pointLists(firstIdx))
     while (visited.size < pointLists.size) {
-      val nextIdx = macroPlanningPoints.indices.filterNot(i => visited(i / 2)).minBy(distBetween(firstIdx, _))
+      val nextIdx = (0 until pointLists.size * 2).filterNot(i => visited(i / 2)).minBy(distBetween(firstIdx, _))
       visited.add(nextIdx / 2)
       sortedPointLists.append(
         if (nextIdx % 2 == 0)
@@ -81,7 +63,7 @@ object Main {
     joinNearby(sortedPointLists)
   }
 
-  def optimize2(pointLists: Seq[Seq[Vec2]]): Seq[Seq[Vec2]] = {
+  def optimizeOrtools(pointLists: Seq[Seq[Vec2]]): Seq[Seq[Vec2]] = {
     System.loadLibrary("jniortools")
     import com.google.ortools.constraintsolver.RoutingModel
     def distBetween(i: Int, j: Int): Double = {
@@ -161,8 +143,14 @@ object Main {
     (for (Seq(a, b) <- pointLists.sliding(2)) yield (b.head - a.last).length).sum
   }
 
+  def time(name: String)(f: => Unit): Unit = {
+    val start = System.nanoTime()
+    f
+    println(f"$name took ${(System.nanoTime() - start) / 1000000.0}%.3f ms")
+  }
+
   def main(args: Array[String]): Unit = {
-    val pointLists = optimize2(SVG.readSVG(new File("test.svg")))
+    val pointLists = optimizeOrtools(SVG.readSVG(new File(args.head)))
     println(s"Penup distance: ${penupDist(pointLists)}")
     println(s"Penups: ${pointLists.size - 1}")
 
