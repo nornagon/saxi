@@ -10,12 +10,9 @@ import saxi.Planning.Plan
 class OpenEBB(port: SerialPort) {
   // TODO: this doesn't handle the ebb's weird \n\r thing. Maybe use scanner instead?
   private val in = new BufferedReader(new InputStreamReader(port.getInputStream))
+
   private var microsteppingMode: Int = 0
-  // See https://github.com/evil-mad/EggBot/blob/399e9130d1b7e340bb084794718ec2309688d9c6/EBB_firmware/app.X/source/RCServo2.c for defaults
-  private var penDownPos: Int = 16000
-  private var penUpPos: Int = 12000
-  private var penDownSpeed: Int = 400
-  private var penUpSpeed: Int = 400
+
   private def stepMultiplier = microsteppingMode match {
     case 5 => 1
     case 4 => 2
@@ -23,32 +20,51 @@ class OpenEBB(port: SerialPort) {
     case 2 => 8
     case 1 => 16
   }
+
+  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
+  // Units: 83ns resolution pwm output.
+  // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
+  val PenServoMin: Int = 7500
+  val PenServoMax: Int = 28000
+
+  // Defaults: see https://github.com/evil-mad/EggBot/blob/399e9130d1b7e340bb084794718ec2309688d9c6/EBB_firmware/app.X/source/RCServo2.c
+  // These are configurable, but must be saved in order to determine how long to wait after issuing a pen up or pen down
+  // command before beginning a lateral move.
+  // There's no way to query the current value of these from the EBB, so assume they're at their default. Things will
+  // be weird if configure() doesn't get called.
+  private var penDownPos: Int = 16000
+  private var penUpPos: Int = 12000
+  // speeds are in 83ns per 24ms. So moving from top to bottom = 20500 steps would take 492 sec at rate=1, 4.9 sec at
+  // rate 100.
+  private var penDownSpeed: Int = 400
+  private var penUpSpeed: Int = 400
   private def msForPenToGoUp: Int = ((penUpPos - penDownPos).abs / penUpSpeed.toDouble * 24).round.toInt
   private def msForPenToGoDown: Int = ((penUpPos - penDownPos).abs / penDownSpeed.toDouble * 24).round.toInt
 
   private def readLine(): String = {
     val line = Iterator.continually(in.readLine().stripLineEnd).find(_.nonEmpty).get
-    //println(s"[debug] read: $line")
     if (line.startsWith("!")) {
       throw new RuntimeException(s"EBB returned error: $line")
     }
     line
   }
 
+  /** Send a raw command to the EBB and expect a single line in return, without an "OK" line to terminate. */
   def query(cmd: String): String = {
     val bytes = s"$cmd\r".getBytes(StandardCharsets.US_ASCII)
     port.writeBytes(bytes, bytes.length)
     readLine()
   }
 
+  /** Send a raw command to the EBB and expect multiple lines in return, with an "OK" line to terminate. */
   def queryM(cmd: String): Seq[String] = {
     val bytes = s"$cmd\r".getBytes(StandardCharsets.US_ASCII)
     port.writeBytes(bytes, bytes.length)
     Iterator.continually(readLine()).takeWhile(_ != "OK").toList
   }
 
+  /** Send a raw command to the EBB and expect a single "OK" line in return. */
   def command(cmd: String): Unit = {
-    println(s"[debug ${System.currentTimeMillis()}] sending: $cmd")
     val bytes = s"$cmd\r".getBytes(StandardCharsets.US_ASCII)
     port.writeBytes(bytes, bytes.length)
     val resp = readLine()
@@ -71,13 +87,6 @@ class OpenEBB(port: SerialPort) {
 
   def disableMotors(): Unit = command("EM,0,0")
 
-  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
-  // Units: 83ns resolution pwm output.
-  // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
-  val PenServoMin: Int = 7500
-  val PenServoMax: Int = 28000
-  // speeds are in 83ns per 24ms. So moving from top to bottom = 20500 steps would take 492 sec at rate=1, 4.9 sec at
-  // rate 100.
   def configure(penUpPct: Double, penDownPct: Double, penUpSpeedPctPerSec: Double = 150, penDownSpeedPctPerSec: Double = 150): Unit = {
     val clocksPerPct = (PenServoMax - PenServoMin) / 100.0
     this.penUpPos = (PenServoMax - penUpPct * clocksPerPct).round.toInt
@@ -113,10 +122,6 @@ class OpenEBB(port: SerialPort) {
     command(s"LM,$initialRate1,$stepsAxis1,$deltaR1,$initialRate2,$stepsAxis2,$deltaR2")
   }
 
-  // TODO: it seems like the math is off with a=x+y, b=x-y, but i think it's being accounted for in the stepsPerInch
-  // constant?
-  private val rotFactor: Double = 1//math.sin(math.Pi/4)
-
   /**
     * Use the low-level move command "LM" to perform a constant-acceleration stepper move.
     *
@@ -131,8 +136,8 @@ class OpenEBB(port: SerialPort) {
     require(xSteps != 0 || ySteps != 0, "Must move on at least one axis")
     require(initialRate >= 0 && finalRate >= 0, s"Rates must be positive, were $initialRate,$finalRate")
     require(initialRate > 0 || finalRate > 0, "Must have non-zero velocity during motion")
-    val stepsAxis1: Long = ((xSteps + ySteps) * rotFactor).round
-    val stepsAxis2: Long = ((xSteps - ySteps) * rotFactor).round
+    val stepsAxis1: Long = xSteps + ySteps
+    val stepsAxis2: Long = xSteps - ySteps
     val norm = math.sqrt(math.pow(xSteps.toDouble, 2) + math.pow(ySteps, 2))
     val normX = xSteps / norm
     val normY = ySteps / norm
@@ -140,10 +145,10 @@ class OpenEBB(port: SerialPort) {
     val initialRateY = initialRate * normY
     val finalRateX = finalRate * normX
     val finalRateY = finalRate * normY
-    val initialRateAxis1 = math.abs(initialRateX + initialRateY) * rotFactor
-    val initialRateAxis2 = math.abs(initialRateX - initialRateY) * rotFactor
-    val finalRateAxis1 = math.abs(finalRateX + finalRateY) * rotFactor
-    val finalRateAxis2 = math.abs(finalRateX - finalRateY) * rotFactor
+    val initialRateAxis1 = math.abs(initialRateX + initialRateY)
+    val initialRateAxis2 = math.abs(initialRateX - initialRateY)
+    val finalRateAxis1 = math.abs(finalRateX + finalRateY)
+    val finalRateAxis2 = math.abs(finalRateX - finalRateY)
     lowlevelMove(stepsAxis1, initialRateAxis1, finalRateAxis1, stepsAxis2, initialRateAxis2, finalRateAxis2)
   }
 
@@ -176,13 +181,19 @@ class OpenEBB(port: SerialPort) {
     command(s"XM,${(duration * 1000).toLong},$x,$y")
   }
 
+  /** Split d into its fractional and integral parts */
   private def modf(d: Double): (Double, Long) = {
     val intPart = d.toLong
     val fracPart = d - intPart
     (fracPart, intPart)
   }
 
-  def executePlan(plan: Plan): Unit = {
+  /**
+    * Execute a constant-acceleration motion plan using the low-level LM command.
+    *
+    * Note that the LM command is only available starting from EBB firmware version 2.5.3.
+    */
+  def executePlanWithLM(plan: Plan): Unit = {
     var error = Vec2(0, 0)
     for (block <- plan.blocks) {
       val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepMultiplier + error.x)
@@ -199,8 +210,14 @@ class OpenEBB(port: SerialPort) {
     }
   }
 
-  def executePlanWithoutLM(plan: Plan): Unit = {
-    val timestepSec = 15 / 1000d
+  /**
+    * Execute a constant-acceleration motion plan using the high-level XM command.
+    *
+    * This is less accurate than using LM, since acceleration will only be adjusted every timestepMs milliseconds,
+    * where LM can adjust the acceleration at a much higher rate, as it executes on-board the EBB.
+    */
+  def executePlanWithXM(plan: Plan, timestepMs: Double = 15): Unit = {
+    val timestepSec = timestepMs / 1000d
     var error = Vec2(0, 0)
     var t = 0d
     while (t < plan.tMax) {
@@ -215,28 +232,41 @@ class OpenEBB(port: SerialPort) {
     }
   }
 
-  // TODO: pass in a ToolingProfile for penup
-  def plot(plannedPaths: Seq[Plan], microsteppingMode: Int = 2, penupMaxVel: Int = 200 * 5, penupAccel: Int = 400 * 5): Unit = {
-    val executePlan = if (supportsLM()) this.executePlan _ else this.executePlanWithoutLM _
-    var curPos = Vec2(0, 0)
+  /** Execute a constant-acceleration motion plan, starting and ending with zero velocity. */
+  def executePlan(plan: Plan): Unit = {
+    if (supportsLM()) executePlanWithLM(plan)
+    else executePlanWithXM(plan)
+  }
 
-    def moveWithPenUp(from: Vec2, to: Vec2): Unit = {
-      val penUpPlan = Planning.constantAccelerationPlan(
-        Seq(from, to), accel = penupAccel, vMax = penupMaxVel, cornerFactor = 0)
-      executePlan(penUpPlan)
-    }
+  /**
+    * Execute a constant-acceleration straight-line move, starting and ending with zero velocity.
+    *
+    * Useful for moving around with the pen up.
+    *
+    * @param from Current position
+    * @param to Target position
+    * @param profile Motion profile to use for the move. The cornering factor will be ignored, as there are no corners
+    *                in a straight line.
+    */
+  def moveRelative(from: Vec2, to: Vec2, profile: ToolingProfile): Unit = {
+    val plan = Planning.constantAccelerationPlan(Seq(from, to), profile)
+    executePlan(plan)
+  }
+
+  def plot(plans: Seq[Plan], microsteppingMode: Int = 2, penupProfile: ToolingProfile = ToolingProfile.AxidrawPenUp): Unit = {
+    var curPos = Vec2(0, 0)
 
     enableMotors(microsteppingMode)
 
     raisePen()
-    for (plan <- plannedPaths) {
-      moveWithPenUp(from = curPos, to = plan.blocks.head.p1)
+    for (plan <- plans) {
+      moveRelative(from = curPos, to = plan.blocks.head.p1, profile = penupProfile)
       lowerPen()
       executePlan(plan)
       raisePen()
       curPos = plan.blocks.last.p2
     }
-    moveWithPenUp(from = curPos, to = Vec2(0, 0))
+    moveRelative(from = curPos, to = Vec2(0, 0), profile = penupProfile)
   }
 
   def waitUntilMotorsIdle(): Unit = {
@@ -273,13 +303,19 @@ class OpenEBB(port: SerialPort) {
     */
   def firmwareVersion(): String = query("V")
 
+  private var cachedSupportsLM: Option[Boolean] = None
   /**
     * @return true iff the EBB firmware supports the LM command.
     */
   def supportsLM(): Boolean = {
-    val Array(major, minor, patch) = firmwareVersion().split(" ").last.split("\\.").map(_.toInt)
-    import scala.math.Ordering.Implicits._
-    (major, minor, patch) >= (2, 5, 3)
+    if (cachedSupportsLM.isEmpty) {
+      cachedSupportsLM = Some {
+        val Array(major, minor, patch) = firmwareVersion().split(" ").last.split("\\.").map(_.toInt)
+        import scala.math.Ordering.Implicits._
+        (major, minor, patch) >= (2, 5, 3)
+      }
+    }
+    cachedSupportsLM.get
   }
 }
 

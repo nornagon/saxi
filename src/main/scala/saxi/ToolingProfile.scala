@@ -13,5 +13,11 @@ object ToolingProfile {
     maximumVelocity = 50 * AxidrawStepsPerMm,
     corneringFactor = 0.127 * AxidrawStepsPerMm
   )
+
+  val AxidrawPenUp = ToolingProfile(
+    acceleration = 400 * AxidrawStepsPerMm,
+    maximumVelocity = 200 * AxidrawStepsPerMm,
+    corneringFactor = 0
+  )
 }
 

@@ -135,19 +135,17 @@ object Planning {
     }
   }
 
-  def constantAccelerationPlan(points: Seq[Vec2], profile: ToolingProfile): Plan =
-    constantAccelerationPlan(points, profile.acceleration, profile.maximumVelocity, profile.corneringFactor)
-
   /**
     * Plan a path, using a constant acceleration profile.
     * @param points Sequence of points to pass through
-    * @param accel Acceleration, in full steps per second per second
-    * @param vMax Maximum velocity, in full steps per second
-    * @param cornerFactor Affects how hard to accelerate around corners; units are full steps
+    * @param profile Tooling profile to use
     * @return A plan of action
     */
-  def constantAccelerationPlan(points: Seq[Vec2], accel: Double, vMax: Double, cornerFactor: Double): Plan = {
+  def constantAccelerationPlan(points: Seq[Vec2], profile: ToolingProfile): Plan = {
     var segments = points.sliding(2).map { case Seq(a, b) => Segment(a, b) }.toSeq
+    val accel = profile.acceleration
+    val vMax = profile.maximumVelocity
+    val cornerFactor = profile.corneringFactor
     for ((s1, s2) <- segments.zip(segments.tail)) {
       s2.maxEntryVelocity = cornerVelocity(s1, s2, vMax, accel, cornerFactor)
       assert(!s2.maxEntryVelocity.isNaN, s"cornerVel was NaN: $s1, $s2, $vMax, $accel, $cornerFactor")
