@@ -38,10 +38,17 @@ object SVG {
       currentElem = None
     }
 
+    override def closePath(): Unit = {
+      currentElem match {
+        case Some(p: PolyLine) =>
+          p.points :+= p.points.head
+        case _ => ???
+      }
+    }
+
     // rest ???
     override def curvetoCubicRel(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Unit = ???
     override def curvetoQuadraticAbs(x1: Float, y1: Float, x: Float, y: Float): Unit = ???
-    override def closePath(): Unit = ???
     override def linetoVerticalAbs(y: Float): Unit = ???
     override def curvetoCubicSmoothRel(x2: Float, y2: Float, x: Float, y: Float): Unit = ???
     override def curvetoQuadraticSmoothAbs(x: Float, y: Float): Unit = ???

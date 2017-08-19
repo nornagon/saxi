@@ -7,7 +7,7 @@ case class ToolingProfile(
 )
 
 object ToolingProfile {
-  private val AxidrawStepsPerMm = 5
+  val AxidrawStepsPerMm = 5
   val AxidrawFast = ToolingProfile(
     acceleration = 200 * AxidrawStepsPerMm,
     maximumVelocity = 50 * AxidrawStepsPerMm,

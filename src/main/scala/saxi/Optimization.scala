@@ -5,7 +5,7 @@ import com.google.ortools.constraintsolver.{FirstSolutionStrategy, NodeEvaluator
 import scala.collection.mutable
 
 object Optimization {
-  def joinNearby(pointLists: Seq[Seq[Vec2]], tolerance: Double = 2): Seq[Seq[Vec2]] = {
+  def joinNearby(pointLists: Seq[Seq[Vec2]], tolerance: Double = 0.5): Seq[Seq[Vec2]] = {
     def maybeJoin(a: Seq[Vec2], b: Seq[Vec2]): Seq[Seq[Vec2]] = {
       if ((a.last - b.head).length <= tolerance)
         Seq(a ++ b.dropWhile(v => (a.last - v).length <= tolerance))

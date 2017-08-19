@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 import com.fazecast.jSerialComm
 import com.fazecast.jSerialComm.SerialPort
 import saxi.Planning.Plan
+import saxi.Util.modf
 
 class OpenEBB(port: SerialPort) {
   // TODO: this doesn't handle the ebb's weird \n\r thing. Maybe use scanner instead?
@@ -181,20 +182,13 @@ class OpenEBB(port: SerialPort) {
     command(s"XM,${(duration * 1000).toLong},$x,$y")
   }
 
-  /** Split d into its fractional and integral parts */
-  private def modf(d: Double): (Double, Long) = {
-    val intPart = d.toLong
-    val fracPart = d - intPart
-    (fracPart, intPart)
-  }
-
   /**
     * Execute a constant-acceleration motion plan using the low-level LM command.
     *
     * Note that the LM command is only available starting from EBB firmware version 2.5.3.
     */
+  var error = Vec2(0, 0)
   def executePlanWithLM(plan: Plan): Unit = {
-    var error = Vec2(0, 0)
     for (block <- plan.blocks) {
       val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepMultiplier + error.x)
       val (errY, stepsY) = modf((block.p2.y - block.p1.y) * stepMultiplier + error.y)
@@ -218,7 +212,7 @@ class OpenEBB(port: SerialPort) {
     */
   def executePlanWithXM(plan: Plan, timestepMs: Double = 15): Unit = {
     val timestepSec = timestepMs / 1000d
-    var error = Vec2(0, 0)
+    //var error = Vec2(0, 0)
     var t = 0d
     while (t < plan.tMax) {
       val i1 = plan.instant(t)

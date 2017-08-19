@@ -1,6 +1,6 @@
 package saxi
 
-import scala.collection.Searching
+import scala.collection.{Searching, mutable}
 
 /**
   * Cribbed from https://github.com/fogleman/axi/blob/master/axi/planner.py
@@ -142,7 +142,16 @@ object Planning {
     * @return A plan of action
     */
   def constantAccelerationPlan(points: Seq[Vec2], profile: ToolingProfile): Plan = {
-    var segments = points.sliding(2).map { case Seq(a, b) => Segment(a, b) }.toSeq
+    val dedupedPoints = mutable.ArrayBuffer.empty[Vec2]
+    dedupedPoints += points.head
+    for (p <- points.tail) {
+      if ((p - dedupedPoints.last).length > epsilon)
+        dedupedPoints += p
+    }
+    if (dedupedPoints.size == 1) {
+      return Plan(Seq(Block(0, 0, 0, dedupedPoints.head, dedupedPoints.head)))
+    }
+    var segments = dedupedPoints.sliding(2).map { case Seq(a, b) => Segment(a, b) }.toSeq
     val accel = profile.acceleration
     val vMax = profile.maximumVelocity
     val cornerFactor = profile.corneringFactor
@@ -151,7 +160,7 @@ object Planning {
       assert(!s2.maxEntryVelocity.isNaN, s"cornerVel was NaN: $s1, $s2, $vMax, $accel, $cornerFactor")
     }
 
-    segments = segments :+ Segment(points.last, points.last)
+    segments = segments :+ Segment(dedupedPoints.last, dedupedPoints.last)
 
     var i: Int = 0
     while (i < segments.size - 1) {
