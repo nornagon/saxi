@@ -50,6 +50,7 @@ object Optimization {
     joinNearby(sortedPointLists)
   }
 
+  /*
   def optimizeOrtools(pointLists: Seq[Seq[Vec2]], timeLimit: Option[Int] = None): Seq[Seq[Vec2]] = {
     System.loadLibrary("jniortools")
     import com.google.ortools.constraintsolver.RoutingModel
@@ -94,6 +95,7 @@ object Optimization {
       if (i % 2 == 0) pointLists(i.toInt / 2) else pointLists(i.toInt / 2).reverse
     })
   }
+  */
 
   def penupDist(pointLists: Seq[Seq[Vec2]]): Double = {
     (for (Seq(a, b) <- pointLists.sliding(2)) yield (b.head - a.last).length).sum
