@@ -342,8 +342,8 @@ object EBB {
   def findEiBotBoard(): Option[SerialPort] =
     jSerialComm.SerialPort.getCommPorts find { _.getDescriptivePortName startsWith "EiBotBoard" }
 
-  def findFirst: EBB = findEiBotBoard() match {
-    case Some(port) => new EBB(port)
-    case None => throw new RuntimeException("Couldn't find a connected EiBotBoard")
+  def findFirst: Option[EBB] = findEiBotBoard() match {
+    case Some(port) => Some(new EBB(port))
+    case None => None
   }
 }

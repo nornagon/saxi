@@ -7,16 +7,15 @@ case class ToolingProfile(
 )
 
 object ToolingProfile {
-  val AxidrawStepsPerMm = 5
   val AxidrawFast = ToolingProfile(
-    acceleration = 200 * AxidrawStepsPerMm,
-    maximumVelocity = 50 * AxidrawStepsPerMm,
-    corneringFactor = 0.127 * AxidrawStepsPerMm
+    acceleration = 200 * Device.Axidraw.stepsPerMm,
+    maximumVelocity = 50 * Device.Axidraw.stepsPerMm,
+    corneringFactor = 0.127 * Device.Axidraw.stepsPerMm
   )
 
   val AxidrawPenUp = ToolingProfile(
-    acceleration = 400 * AxidrawStepsPerMm,
-    maximumVelocity = 200 * AxidrawStepsPerMm,
+    acceleration = 400 * Device.Axidraw.stepsPerMm,
+    maximumVelocity = 200 * Device.Axidraw.stepsPerMm,
     corneringFactor = 0
   )
 }

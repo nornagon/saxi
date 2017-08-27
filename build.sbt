@@ -13,6 +13,7 @@ lazy val root = (project in file(".")).
     libraryDependencies ++= Seq(
       scalaTest % Test,
       jSerialComm,
-      "org.apache.xmlgraphics" % "batik-parser" % "1.9"
+      "org.apache.xmlgraphics" % "batik-parser" % "1.9",
+      "com.github.scopt" %% "scopt" % "3.7.0"
     )
   )
