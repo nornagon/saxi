@@ -10,13 +10,47 @@ import org.xml.sax.helpers.DefaultHandler
 import scala.collection.mutable
 
 object SVG {
-  trait PathElement
-  case class PolyLine(var points: Seq[Vec2]) extends PathElement
+  case class Path(var elements: Seq[PathElement]) {
+    def toPoints: Seq[Vec2] = {
+      val points = mutable.Buffer.empty[Vec2]
+      for (elem <- elements) {
+        for (point <- elem.toPoints) {
+          if (points.isEmpty || points.last != point)
+            points.append(point)
+        }
+      }
+      points
+    }
+  }
+
+  trait PathElement {
+    def toPoints: Seq[Vec2]
+
+    def a: Vec2
+    def b: Vec2
+  }
+  case class Segment(a: Vec2, b: Vec2) extends PathElement {
+    override def toPoints: Seq[Vec2] = Seq(a, b)
+  }
+  case class CubicCurve(a: Vec2, cp1: Vec2, cp2: Vec2, b: Vec2) extends PathElement {
+    override def toPoints: Seq[Vec2] = Seq(a, b) // TODO:
+  }
 
   class MyPathHandler extends PathHandler {
     var currentPos = Vec2(0, 0)
-    var currentElem: Option[PathElement] = None
-    val pathElems: mutable.ArrayBuffer[PathElement] = mutable.ArrayBuffer.empty[PathElement]
+    var currentPath: Option[Path] = None
+    val paths: mutable.ArrayBuffer[Path] = mutable.ArrayBuffer.empty[Path]
+
+    private def appendPathElement(pathElement: PathElement): Unit = {
+      val path = currentPath.getOrElse {
+        val newPath = Path(Seq.empty)
+        paths.append(newPath)
+        currentPath = Some(newPath)
+        newPath
+      }
+      path.elements :+= pathElement
+    }
+
     override def startPath(): Unit = {
       currentPos = Vec2(0, 0)
     }
@@ -24,34 +58,54 @@ object SVG {
     override def endPath(): Unit = {}
 
     override def linetoAbs(x: Float, y: Float): Unit = {
-      currentElem match {
-        case Some(pl: PolyLine) => pl.points :+= Vec2(x, y)
-        case _ =>
-          val pl = PolyLine(Seq(currentPos, Vec2(x, y)))
-          pathElems.append(pl)
-          currentElem = Some(pl)
-      }
+      appendPathElement(Segment(currentPos, Vec2(x, y)))
+      currentPos = Vec2(x, y)
     }
+    override def linetoRel(x: Float, y: Float): Unit =
+      linetoAbs((currentPos.x + x).toFloat, (currentPos.y + y).toFloat)
 
     override def movetoAbs(x: Float, y: Float): Unit = {
       currentPos = Vec2(x, y)
-      currentElem = None
+      currentPath = None
     }
+    override def movetoRel(x: Float, y: Float): Unit =
+      movetoAbs((currentPos.x + x).toFloat, (currentPos.y + y).toFloat)
 
     override def closePath(): Unit = {
-      currentElem match {
-        case Some(p: PolyLine) =>
-          p.points :+= p.points.head
-        case _ => ???
+      currentPath match {
+        case Some(path) if path.elements.nonEmpty =>
+          path.elements :+= Segment(currentPos, path.elements.head.a)
+        case _ => ??? // What does Z do if there's no current path?
       }
     }
 
+    override def curvetoCubicAbs(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Unit = {
+      appendPathElement(CubicCurve(currentPos, Vec2(x1, y1), Vec2(x2, y2), Vec2(x, y)))
+      currentPos = Vec2(x, y)
+    }
+    override def curvetoCubicRel(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Unit = {
+      appendPathElement(CubicCurve(currentPos, currentPos + Vec2(x1, y1), currentPos + Vec2(x2, y2), currentPos + Vec2(x, y)))
+      currentPos += Vec2(x, y)
+    }
+
     // rest ???
-    override def curvetoCubicRel(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Unit = ???
-    override def curvetoQuadraticAbs(x1: Float, y1: Float, x: Float, y: Float): Unit = ???
-    override def linetoVerticalAbs(y: Float): Unit = ???
+    override def curvetoCubicSmoothAbs(x2: Float, y2: Float, x: Float, y: Float): Unit = ???
     override def curvetoCubicSmoothRel(x2: Float, y2: Float, x: Float, y: Float): Unit = ???
+    override def curvetoQuadraticAbs(x1: Float, y1: Float, x: Float, y: Float): Unit = ???
+    override def curvetoQuadraticRel(x1: Float, y1: Float, x: Float, y: Float): Unit = ???
     override def curvetoQuadraticSmoothAbs(x: Float, y: Float): Unit = ???
+    override def curvetoQuadraticSmoothRel(x: Float, y: Float): Unit = ???
+    override def linetoVerticalAbs(y: Float): Unit = ???
+    override def linetoVerticalRel(y: Float): Unit = ???
+    override def arcAbs(
+      rx: Float,
+      ry: Float,
+      xAxisRotation: Float,
+      largeArcFlag: Boolean,
+      sweepFlag: Boolean,
+      x: Float,
+      y: Float
+    ): Unit = ???
     override def arcRel(
       rx: Float,
       ry: Float,
@@ -62,23 +116,7 @@ object SVG {
       y: Float
     ): Unit = ???
     override def linetoHorizontalAbs(x: Float): Unit = ???
-    override def curvetoCubicAbs(x1: Float, y1: Float, x2: Float, y2: Float, x: Float, y: Float): Unit = ???
-    override def curvetoQuadraticRel(x1: Float, y1: Float, x: Float, y: Float): Unit = ???
     override def linetoHorizontalRel(x: Float): Unit = ???
-    override def curvetoQuadraticSmoothRel(x: Float, y: Float): Unit = ???
-    override def linetoVerticalRel(y: Float): Unit = ???
-    override def movetoRel(x: Float, y: Float): Unit = ???
-    override def arcAbs(
-      rx: Float,
-      ry: Float,
-      xAxisRotation: Float,
-      largeArcFlag: Boolean,
-      sweepFlag: Boolean,
-      x: Float,
-      y: Float
-    ): Unit = ???
-    override def curvetoCubicSmoothAbs(x2: Float, y2: Float, x: Float, y: Float): Unit = ???
-    override def linetoRel(x: Float, y: Float): Unit = ???
   }
 
   class MyTransformHandler extends TransformListHandler {
@@ -126,8 +164,9 @@ object SVG {
             val handler = new MyPathHandler
             pathParser.setPathHandler(handler)
             pathParser.parse(attributes.getValue("d"))
-            handler.pathElems.foreach {
-              case PolyLine(points) => paths.append(points.map(transformStack.head * _))
+            handler.paths.foreach { path =>
+              val points: Seq[Vec2] = path.toPoints
+              paths.append(points.map(transformStack.head * _))
             }
           case "g" =>
             val handler = new MyTransformHandler
