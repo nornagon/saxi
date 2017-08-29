@@ -5,16 +5,17 @@ import scala.collection.immutable.ListMap
 case class PaperSize(
   size: Vec2
 ) {
-  def flipped: PaperSize = PaperSize(Vec2(size.y, size.x))
+  def portrait: PaperSize = PaperSize(Vec2(math.min(size.x, size.y), math.max(size.x, size.y)))
+  def landscape: PaperSize = PaperSize(Vec2(math.max(size.x, size.y), math.min(size.x, size.y)))
 }
 
 object PaperSize {
-  val USLetter: PaperSize = PaperSize(Vec2(11, 8.5) * 25.4)
-  val USLegal: PaperSize = PaperSize(Vec2(14, 8.5) * 25.4)
-  val ArchA: PaperSize = PaperSize(Vec2(12, 9) * 25.4)
-  val A4: PaperSize = PaperSize(Vec2(297, 210))
-  val A5: PaperSize = PaperSize(Vec2(210, 148))
-  val A6: PaperSize = PaperSize(Vec2(148, 105))
+  val USLetter: PaperSize = PaperSize(Vec2(8.5, 11) * 25.4)
+  val USLegal: PaperSize = PaperSize(Vec2(8.5, 14) * 25.4)
+  val ArchA: PaperSize = PaperSize(Vec2(9, 12) * 25.4)
+  val A4: PaperSize = PaperSize(Vec2(210, 297))
+  val A5: PaperSize = PaperSize(Vec2(148, 210))
+  val A6: PaperSize = PaperSize(Vec2(105, 148))
 
   val byName = ListMap(
     "USLetter" -> USLetter,

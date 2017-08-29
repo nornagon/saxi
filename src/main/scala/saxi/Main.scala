@@ -2,6 +2,8 @@ package saxi
 
 import java.io.File
 
+import saxi.Planning.Plan
+
 object Main {
   def scaleToPaper(pointLists: Seq[Seq[Vec2]], paperSize: PaperSize, marginMm: Double): Seq[Seq[Vec2]] = {
     Util.scaleToFit(
@@ -22,7 +24,7 @@ object Main {
 
   implicit val paperReader: scopt.Read[PaperSize] = scopt.Read.reads { s =>
     PaperSize.byName.get(s) match {
-      case Some(paperSize) => paperSize
+      case Some(paperSize) => paperSize.landscape
       case None => s match {
         case paperSizeString(width, height, unit) =>
           PaperSize(Vec2(width.toDouble, height.toDouble) * mmPer(unit))
@@ -49,7 +51,6 @@ object Main {
     command: Command = null,
     artFile: File = null,
     paperSize: PaperSize = null,
-    paperIsPortrait: Boolean = false,
     marginMm: Double = 20,
     toolingProfile: ToolingProfile = ToolingProfile.AxidrawFast,
     device: Device = Device.Axidraw,
@@ -69,8 +70,28 @@ object Main {
           .text(s"Either WxH{in,cm,mm} or a standard size. Supported sizes: ${PaperSize.supported}.")
           .action { (ps, c) => c.copy(paperSize = ps) },
         opt[Unit]("portrait")
-          .text("If present, the paper has its short side in the X direction. Will not flip the drawing.")
-          .action { (_, c) => c.copy(paperIsPortrait = true) },
+          .text("If present, the paper has its short side in the X direction. Will not flip the drawing. Defaults to landscape.")
+          .action { (_, c) => c.copy(paperSize = c.paperSize.portrait) },
+        opt[Length]('m', "margin")
+          .valueName("<Xmm|Xin>")
+          .text("Margin to leave at paper edge. Defaults to 20mm.")
+          .action { (m, c) => c.copy(marginMm = m.lengthMm) },
+      )
+
+    cmd("info").action { (_, c) => c.copy(command = InfoCommand) }
+      .text("Print info about what would be plotted")
+      .children(
+        arg[File]("<art.svg>")
+          .required()
+          .action { case (artFile, c: Config) => c.copy(artFile = artFile) },
+        opt[PaperSize]('s', "paper-size")
+          .required()
+          .valueName(s"<WxHmm|WxHin|${PaperSize.byName.keys.mkString("|")}>")
+          .text(s"Either WxH{in,cm,mm} or a standard size. Supported sizes: ${PaperSize.supported}.")
+          .action { (ps, c) => c.copy(paperSize = ps) },
+        opt[Unit]("portrait")
+          .text("If present, the paper has its short side in the X direction. Will not flip the drawing. Defaults to landscape.")
+          .action { (_, c) => c.copy(paperSize = c.paperSize.portrait) },
         opt[Length]('m', "margin")
           .valueName("<Xmm|Xin>")
           .text("Margin to leave at paper edge. Defaults to 20mm.")
@@ -85,34 +106,46 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     parser.parse(args, Config()) match {
-      case Some(config) if config.command == PlotCommand =>
-        plotCmd(config)
+      case Some(config) =>
+        config.command match {
+          case PlotCommand => plotCmd(config)
+          case InfoCommand => infoCmd(config)
+        }
       case None =>
-        // bad args, error message was displayed
+        // scopt already printed an error message, nothing left to do but quit
     }
   }
 
-  def plotCmd(config: Config): Unit = {
+  def planFromConfig(config: Config): Seq[Plan] = {
     val pointLists = Optimization.optimize(SVG.readSVG(config.artFile))
 
-    val paperSize =
-      if (config.paperIsPortrait) config.paperSize.flipped
-      else config.paperSize
+    val scaledPointLists =
+      scaleToPaper(pointLists, config.paperSize, marginMm = config.marginMm)
+        .map(_.map(_ * config.device.stepsPerMm))
 
-    val scaledPointLists = scaleToPaper(pointLists, paperSize, marginMm = config.marginMm).map {
-      _.map(_ * config.device.stepsPerMm)
-    }
+    Planning.plan(scaledPointLists, config.toolingProfile)
+  }
 
-    val plans = Planning.plan(scaledPointLists, config.toolingProfile)
-
-    println(s"Planned ${pointLists.map(_.size).sum} points with ${plans.map(_.blocks.size).sum} blocks")
+  def printInfo(plans: Seq[Plan], device: Device): Unit = {
     // TODO: Estimate total time, incl. pen-up moves
     println(f"Estimated pen-down time: ${Util.formatDuration(plans.map(_.tMax).sum)}")
-    val (min, max) = Util.extent(scaledPointLists)
-    println("Drawing bounds, from the current location of the pen:")
+
+    val (min, max) = Util.extent(plans.map(_.blocks.flatMap(b => Seq(b.p1, b.p2))))
     println(
-      f"  ${min.x / config.device.stepsPerMm}%.2f - ${max.x / config.device.stepsPerMm}%.2f mm in X\n" +
-      f"  ${min.y / config.device.stepsPerMm}%.2f - ${max.y / config.device.stepsPerMm}%.2f mm in Y")
+      f"""|Drawing bounds:
+          |  ${min.x / device.stepsPerMm}%.2f - ${max.x / device.stepsPerMm}%.2f mm in X
+          |  ${min.y / device.stepsPerMm}%.2f - ${max.y / device.stepsPerMm}%.2f mm in Y""".stripMargin)
+  }
+
+  def infoCmd(config: Config): Unit = {
+    val plans = planFromConfig(config)
+    printInfo(plans, config.device)
+  }
+
+  def plotCmd(config: Config): Unit = {
+    val plans = planFromConfig(config)
+
+    printInfo(plans, config.device)
 
     EBB.findFirst match {
       case Some(port) =>
@@ -136,7 +169,7 @@ object Main {
           ebb.disableMotors()
         }
       case None =>
-        println("[ERR] Couldn't find a connected EiBotBoard.")
+        println("[ERROR] Couldn't find a connected EiBotBoard.")
         sys.exit(1)
     }
 

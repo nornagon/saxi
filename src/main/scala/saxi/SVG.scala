@@ -193,7 +193,6 @@ object SVG {
       }
     })
 
-    println(s"Read ${paths.map(_.size).sum} points in ${paths.size} paths")
     paths
   }
 
