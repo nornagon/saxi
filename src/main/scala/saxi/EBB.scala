@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 
 import com.fazecast.jSerialComm
 import com.fazecast.jSerialComm.SerialPort
-import saxi.Planning.Plan
+import saxi.Planning.{PenMotion, Plan, XYMotion}
 import saxi.Util.modf
 
 class OpenEBB(port: SerialPort) {
@@ -110,6 +110,10 @@ class OpenEBB(port: SerialPort) {
     command(s"SP,0,$duration")
   }
 
+  def setPenHeight(height: Int, rate: Int, delay: Int = 0): Unit = {
+    command(s"S2,$height,4,$rate,$delay")
+  }
+
   def lowlevelMove(
     stepsAxis1: Long,
     initialStepsPerSecAxis1: Double,
@@ -188,7 +192,7 @@ class OpenEBB(port: SerialPort) {
     * Note that the LM command is only available starting from EBB firmware version 2.5.3.
     */
   var error = Vec2(0, 0)
-  def executePlanWithLM(plan: Plan): Unit = {
+  def executeXYMotionWithLM(plan: XYMotion): Unit = {
     for (block <- plan.blocks) {
       val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepMultiplier + error.x)
       val (errY, stepsY) = modf((block.p2.y - block.p1.y) * stepMultiplier + error.y)
@@ -210,11 +214,11 @@ class OpenEBB(port: SerialPort) {
     * This is less accurate than using LM, since acceleration will only be adjusted every timestepMs milliseconds,
     * where LM can adjust the acceleration at a much higher rate, as it executes on-board the EBB.
     */
-  def executePlanWithXM(plan: Plan, timestepMs: Double = 15): Unit = {
+  def executeXYMotionWithXM(plan: XYMotion, timestepMs: Double = 15): Unit = {
     val timestepSec = timestepMs / 1000d
     //var error = Vec2(0, 0)
     var t = 0d
-    while (t < plan.tMax) {
+    while (t < plan.duration) {
       val i1 = plan.instant(t)
       val i2 = plan.instant(t + timestepSec)
       val d = i2.p - i1.p
@@ -227,40 +231,24 @@ class OpenEBB(port: SerialPort) {
   }
 
   /** Execute a constant-acceleration motion plan, starting and ending with zero velocity. */
-  def executePlan(plan: Plan): Unit = {
-    if (supportsLM()) executePlanWithLM(plan)
-    else executePlanWithXM(plan)
+  def executeXYMotion(plan: XYMotion): Unit = {
+    if (supportsLM()) executeXYMotionWithLM(plan)
+    else executeXYMotionWithXM(plan)
   }
 
-  /**
-    * Execute a constant-acceleration straight-line move, starting and ending with zero velocity.
-    *
-    * Useful for moving around with the pen up.
-    *
-    * @param from Current position
-    * @param to Target position
-    * @param profile Motion profile to use for the move. The cornering factor will be ignored, as there are no corners
-    *                in a straight line.
-    */
-  def moveRelative(from: Vec2, to: Vec2, profile: ToolingProfile): Unit = {
-    val plan = Planning.constantAccelerationPlan(Seq(from, to), profile)
-    executePlan(plan)
-  }
-
-  def plot(plans: Seq[Plan], microsteppingMode: Int = 2, penupProfile: ToolingProfile = ToolingProfile.AxidrawPenUp): Unit = {
-    var curPos = Vec2(0, 0)
-
+  def executePlan(plan: Plan, microsteppingMode: Int = 2): Unit = {
     enableMotors(microsteppingMode)
 
-    raisePen()
-    for (plan <- plans) {
-      moveRelative(from = curPos, to = plan.blocks.head.p1, profile = penupProfile)
-      lowerPen()
-      executePlan(plan)
-      raisePen()
-      curPos = plan.blocks.last.p2
+    for (motion <- plan.motions) {
+      motion match {
+        case xy: XYMotion =>
+          executeXYMotion(xy)
+        case pm: PenMotion =>
+          val clocksMoved = (pm.finalPos - pm.initialPos).abs
+          val rate = clocksMoved * 24 / (pm.duration * 1000)
+          setPenHeight(pm.finalPos, rate.round.toInt, (pm.duration * 1000).round.toInt)
+      }
     }
-    moveRelative(from = curPos, to = Vec2(0, 0), profile = penupProfile)
   }
 
   def waitUntilMotorsIdle(): Unit = {
@@ -326,7 +314,7 @@ class EBB(port: SerialPort) {
     if (!port.openPort()) {
       throw new RuntimeException(s"Couldn't open serial device ${port.getSystemPortName}")
     }
-    port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING|SerialPort.TIMEOUT_WRITE_BLOCKING, 2500, 2500)
+    port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING|SerialPort.TIMEOUT_WRITE_BLOCKING, 5000, 5000)
     exhaust()
     try {
       f(new OpenEBB(port))

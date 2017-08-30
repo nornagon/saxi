@@ -2,7 +2,7 @@ package saxi
 
 import java.io.File
 
-import saxi.Planning.Plan
+import saxi.Planning.{Plan, XYMotion}
 
 object Main {
   def scaleToPaper(pointLists: Seq[Seq[Vec2]], paperSize: PaperSize, marginMm: Double): Seq[Seq[Vec2]] = {
@@ -52,7 +52,7 @@ object Main {
     artFile: File = null,
     paperSize: PaperSize = null,
     marginMm: Double = 20,
-    toolingProfile: ToolingProfile = ToolingProfile.AxidrawFast,
+    toolingProfile: ToolingProfile = ToolingProfile.AxidrawFastProfile,
     device: Device = Device.Axidraw,
   )
   val parser = new scopt.OptionParser[Config](programName = "saxi") {
@@ -116,7 +116,7 @@ object Main {
     }
   }
 
-  def planFromConfig(config: Config): Seq[Plan] = {
+  def planFromConfig(config: Config): Plan = {
     val pointLists = Optimization.optimize(SVG.readSVG(config.artFile))
 
     val scaledPointLists =
@@ -126,11 +126,14 @@ object Main {
     Planning.plan(scaledPointLists, config.toolingProfile)
   }
 
-  def printInfo(plans: Seq[Plan], device: Device): Unit = {
-    // TODO: Estimate total time, incl. pen-up moves
-    println(f"Estimated pen-down time: ${Util.formatDuration(plans.map(_.tMax).sum)}")
+  def printInfo(plan: Plan, device: Device): Unit = {
+    println(f"Estimated duration: ${Util.formatDuration(plan.duration)}")
 
-    val (min, max) = Util.extent(plans.map(_.blocks.flatMap(b => Seq(b.p1, b.p2))))
+    // The first motion is from (0,0) to the first point of the first pen-down motion; the last motion is from the last
+    // point of the last pen-down motion to (0,0). Both happen with the pen up.
+    val penDownMotions = plan.motions.slice(1, plan.motions.size - 2)
+      .collect { case p: XYMotion => p.blocks.flatMap(b => Seq(b.p1, b.p2)) }
+    val (min, max) = Util.extent(penDownMotions)
     println(
       f"""|Drawing bounds:
           |  ${min.x / device.stepsPerMm}%.2f - ${max.x / device.stepsPerMm}%.2f mm in X
@@ -138,14 +141,13 @@ object Main {
   }
 
   def infoCmd(config: Config): Unit = {
-    val plans = planFromConfig(config)
-    printInfo(plans, config.device)
+    val plan = planFromConfig(config)
+    printInfo(plan, config.device)
   }
 
   def plotCmd(config: Config): Unit = {
-    val plans = planFromConfig(config)
-
-    printInfo(plans, config.device)
+    val plan = planFromConfig(config)
+    printInfo(plan, config.device)
 
     EBB.findFirst match {
       case Some(port) =>
@@ -163,7 +165,9 @@ object Main {
           println("Press [enter] to plot.")
           io.StdIn.readLine()
 
-          ebb.plot(plans)
+          val begin = System.currentTimeMillis()
+          ebb.executePlan(plan)
+          println(s"Plot took ${Util.formatDuration((System.currentTimeMillis() - begin) / 1000.0)}")
 
           ebb.waitUntilMotorsIdle()
           ebb.disableMotors()

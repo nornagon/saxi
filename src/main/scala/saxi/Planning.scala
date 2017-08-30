@@ -1,5 +1,7 @@
 package saxi
 
+import scala.annotation.tailrec
+import scala.collection.mutable.ArrayBuffer
 import scala.collection.{Searching, mutable}
 
 /**
@@ -25,10 +27,16 @@ object Planning {
     }
   }
 
-  case class Plan(blocks: Seq[Block]) {
+  trait Motion {
+    def duration: Double
+  }
+
+  case class PenMotion(initialPos: Int, finalPos: Int, duration: Double) extends Motion
+
+  case class XYMotion(blocks: Seq[Block]) extends Motion {
     private val ts: Seq[Double] = blocks.map(_.duration).scan(0d)(_ + _).init
     private val ss: Seq[Double] = blocks.map(_.distance).scan(0d)(_ + _).init
-    val tMax: Double = blocks.map(_.duration).sum
+    val duration: Double = blocks.map(_.duration).sum
 
     def instant(t: Double): Instant = {
       val result = Searching.search(ts).search(t)
@@ -39,6 +47,13 @@ object Planning {
       val block = blocks(blockIdx)
       block.instant(t - ts(blockIdx), ts(blockIdx), ss(blockIdx))
     }
+
+    def p1: Vec2 = blocks.head.p1
+    def p2: Vec2 = blocks.last.p2
+  }
+
+  case class Plan(motions: Seq[Motion]) {
+    def duration: Double = motions.map(_.duration).sum
   }
 
   case class Segment(
@@ -141,7 +156,7 @@ object Planning {
     * @param profile Tooling profile to use
     * @return A plan of action
     */
-  def constantAccelerationPlan(points: Seq[Vec2], profile: ToolingProfile): Plan = {
+  def constantAccelerationPlan(points: Seq[Vec2], profile: AccelerationProfile): XYMotion = {
     val dedupedPoints = mutable.ArrayBuffer.empty[Vec2]
     dedupedPoints += points.head
     for (p <- points.tail) {
@@ -149,7 +164,7 @@ object Planning {
         dedupedPoints += p
     }
     if (dedupedPoints.size == 1) {
-      return Plan(Seq(Block(0, 0, 0, dedupedPoints.head, dedupedPoints.head)))
+      return XYMotion(Seq(Block(0, 0, 0, dedupedPoints.head, dedupedPoints.head)))
     }
     var segments = dedupedPoints.sliding(2).map { case Seq(a, b) => Segment(a, b) }.toSeq
     val accel = profile.acceleration
@@ -190,7 +205,7 @@ object Planning {
         nextSegment.entryVelocity = vFinal
         i += 1
       } else if (m.vMax > vMax) {
-        // Triangle profile would exceed maximum velocity, so top out.
+        // Triangle profile would exceed maximum velocity, so top out at vMax.
         val z = Trapezoid.compute(distance, vInitial, vMax, vExit, accel, p1, p2)
         segment.blocks = Seq(
           Block(accel, z.t1, vInitial, z.p1, z.p2),
@@ -210,15 +225,22 @@ object Planning {
       }
     }
     val blocks: Seq[Block] = segments.flatMap(_.blocks).filter(_.duration > epsilon)
-    Plan(blocks.toList)
+    XYMotion(blocks.toList)
   }
 
   def plan(
     paths: Seq[Seq[Vec2]],
     profile: ToolingProfile
-  ): Seq[Plan] = {
-    paths.map { path =>
-      Planning.constantAccelerationPlan(path, profile)
-    }
+  ): Plan = {
+    val drawnMotions = paths.map { constantAccelerationPlan(_, profile.penDownProfile) }
+    Plan((constantAccelerationPlan(Seq(Vec2(0, 0)), profile.penUpProfile) +: drawnMotions).sliding(2).flatMap {
+      case Seq(a, b) =>
+        Seq(
+          constantAccelerationPlan(Seq(a.p2, b.p1), profile.penUpProfile),
+          PenMotion(profile.penUpPos, profile.penDownPos, profile.penDropDuration),
+          b,
+          PenMotion(profile.penDownPos, profile.penUpPos, profile.penLiftDuration),
+        )
+    }.toSeq :+ constantAccelerationPlan(Seq(drawnMotions.last.p2, Vec2(0, 0)), profile.penUpProfile))
   }
 }
