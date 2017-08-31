@@ -52,7 +52,7 @@ object Main {
     artFile: File = null,
     paperSize: PaperSize = null,
     marginMm: Double = 20,
-    toolingProfile: ToolingProfile = ToolingProfile.AxidrawFastProfile,
+    toolingProfile: ToolingProfile = ToolingProfile.AxidrawFast,
     device: Device = Device.Axidraw,
   )
   val parser = new scopt.OptionParser[Config](programName = "saxi") {
@@ -156,8 +156,8 @@ object Main {
             println("[ERROR] Device does not appear to have servo power.")
             return
           }
-          ebb.configure(penUpPct = 50, penDownPct = 60)
 
+          // TODO: do the motors need to be enabled to move the pen?
           ebb.enableMotors(microsteppingMode = 5)
           ebb.raisePen()
           ebb.disableMotors()
@@ -167,9 +167,9 @@ object Main {
 
           val begin = System.currentTimeMillis()
           ebb.executePlan(plan)
+          ebb.waitUntilMotorsIdle()
           println(s"Plot took ${Util.formatDuration((System.currentTimeMillis() - begin) / 1000.0)}")
 
-          ebb.waitUntilMotorsIdle()
           ebb.disableMotors()
         }
       case None =>

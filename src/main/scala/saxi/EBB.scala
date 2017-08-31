@@ -22,6 +22,7 @@ class OpenEBB(port: SerialPort) {
     case 1 => 16
   }
 
+  // TODO: remove AxiDraw-specific stuff from EBB
   // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
   // Units: 83ns resolution pwm output.
   // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
@@ -186,12 +187,13 @@ class OpenEBB(port: SerialPort) {
     command(s"XM,${(duration * 1000).toLong},$x,$y")
   }
 
+  /** Accumulated XY error, used to correct for movements with sub-step resolution */
+  var error = Vec2(0, 0)
   /**
     * Execute a constant-acceleration motion plan using the low-level LM command.
     *
     * Note that the LM command is only available starting from EBB firmware version 2.5.3.
     */
-  var error = Vec2(0, 0)
   def executeXYMotionWithLM(plan: XYMotion): Unit = {
     for (block <- plan.blocks) {
       val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepMultiplier + error.x)
@@ -216,7 +218,6 @@ class OpenEBB(port: SerialPort) {
     */
   def executeXYMotionWithXM(plan: XYMotion, timestepMs: Double = 15): Unit = {
     val timestepSec = timestepMs / 1000d
-    //var error = Vec2(0, 0)
     var t = 0d
     while (t < plan.duration) {
       val i1 = plan.instant(t)
@@ -314,6 +315,7 @@ class EBB(port: SerialPort) {
     if (!port.openPort()) {
       throw new RuntimeException(s"Couldn't open serial device ${port.getSystemPortName}")
     }
+    // TODO: set the timeout dynamically according to the expected duration of the command being executed
     port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING|SerialPort.TIMEOUT_WRITE_BLOCKING, 5000, 5000)
     exhaust()
     try {
