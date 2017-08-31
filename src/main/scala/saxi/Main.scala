@@ -14,8 +14,8 @@ object Main {
   }
 
   // "WxHin", "W x H mm" and friends
-  private val paperSizeString = raw"(\\d+(?:\\.\\d+)?)\\s*x\\s*(\\d+(?:\\.\\d+)?)\\s*(in|mm|cm)".r
-  private val lengthString = raw"(\\d+(?:\\.\\d+)?)\\s*(in|mm|cm)".r
+  private val paperSizeString = "(\\d+(?:\\.\\d+)?)\\s*x\\s*(\\d+(?:\\.\\d+)?)\\s*(in|mm|cm)".r
+  private val lengthString = "(\\d+(?:\\.\\d+)?)\\s*(in|mm|cm)".r
   private def mmPer(unit: String): Double = unit match {
     case "in" => 25.4
     case "cm" => 10
@@ -46,6 +46,7 @@ object Main {
   trait Command
   case object PlotCommand extends Command
   case object InfoCommand extends Command
+  case object VersionCommand extends Command
 
   case class Config(
     command: Command = null,
@@ -98,6 +99,8 @@ object Main {
           .action { (m, c) => c.copy(marginMm = m.lengthMm) },
       )
 
+    cmd("version").text("Print info about EBB version").action { (_, c) => c.copy(command = VersionCommand) }
+
     checkConfig { c =>
       if (c.command != null) success
       else failure("Must specify a command")
@@ -110,6 +113,7 @@ object Main {
         config.command match {
           case PlotCommand => plotCmd(config)
           case InfoCommand => infoCmd(config)
+          case VersionCommand => versionCmd()
         }
       case None =>
         // scopt already printed an error message, nothing left to do but quit
@@ -138,6 +142,16 @@ object Main {
       f"""|Drawing bounds:
           |  ${min.x / device.stepsPerMm}%.2f - ${max.x / device.stepsPerMm}%.2f mm in X
           |  ${min.y / device.stepsPerMm}%.2f - ${max.y / device.stepsPerMm}%.2f mm in Y""".stripMargin)
+  }
+
+  def versionCmd(): Unit = {
+    EBB.findFirst match {
+      case Some(port) =>
+        port.open { ebb => println(ebb.firmwareVersion()) }
+      case None =>
+        println("[ERROR] Couldn't find a connected EiBotBoard.")
+        sys.exit(1)
+    }
   }
 
   def infoCmd(config: Config): Unit = {
