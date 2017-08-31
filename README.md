@@ -2,8 +2,8 @@
 ##### make plot good
 
 saxi is a command-line tool and Scala library for interacting with the [AxiDraw
-drawing machine](https://axidraw.com/). It's simple to use from the command
-line, and is exactingly precise.
+drawing machine](https://axidraw.com/) by Evil Mad Scientist. It's simple to
+use from the command line, and is exactingly precise.
 
 ### Usage
 
