@@ -1,5 +1,7 @@
 import Dependencies._
 
+enablePlugins(JavaAppPackaging)
+
 lazy val root = (project in file(".")).
   settings(
     inThisBuild(List(
