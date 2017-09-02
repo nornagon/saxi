@@ -4,6 +4,7 @@ trait Device {
   def stepsPerMm: Double
   def penServoMin: Int
   def penServoMax: Int
+  def penPctToPos(pct: Double): Int
 }
 
 object Device {

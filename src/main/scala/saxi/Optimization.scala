@@ -1,7 +1,5 @@
 package saxi
 
-import com.google.ortools.constraintsolver.{FirstSolutionStrategy, NodeEvaluator2, RoutingSearchParameters}
-
 import scala.collection.mutable
 
 object Optimization {
@@ -20,6 +18,7 @@ object Optimization {
   }
 
   def optimize(pointLists: Seq[Seq[Vec2]]): Seq[Seq[Vec2]] = {
+    if (pointLists.isEmpty) return pointLists
     def distBetween(i: Int, j: Int): Double = {
       if (i == j) return 0
       val a = pointLists(i/2)

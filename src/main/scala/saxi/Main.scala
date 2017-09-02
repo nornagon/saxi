@@ -77,6 +77,14 @@ object Main {
           .valueName("<Xmm|Xin>")
           .text("Margin to leave at paper edge. Defaults to 20mm.")
           .action { (m, c) => c.copy(marginMm = m.lengthMm) },
+        opt[Double]("pen-up")
+          .valueName("<PenUp%>")
+          .text("% of servo range for pen up height")
+          .action { (p, c) => c.copy(toolingProfile = c.toolingProfile.copy(penUpPos = c.device.penPctToPos(p))) },
+        opt[Double]("pen-down")
+          .valueName("<PenDown%>")
+          .text("% of servo range for pen down height")
+          .action { (p, c) => c.copy(toolingProfile = c.toolingProfile.copy(penDownPos = c.device.penPctToPos(p))) }
       )
 
     cmd("info").action { (_, c) => c.copy(command = InfoCommand) }
@@ -108,6 +116,7 @@ object Main {
   }
 
   def main(args: Array[String]): Unit = {
+    System.setProperty("java.awt.headless", "true")
     parser.parse(args, Config()) match {
       case Some(config) =>
         config.command match {
@@ -122,6 +131,9 @@ object Main {
 
   def planFromConfig(config: Config): Plan = {
     val pointLists = Optimization.optimize(SVG.readSVG(config.artFile))
+    if (pointLists.isEmpty) {
+      return Plan(Seq.empty)
+    }
 
     val scaledPointLists =
       scaleToPaper(pointLists, config.paperSize, marginMm = config.marginMm)
@@ -131,6 +143,10 @@ object Main {
   }
 
   def printInfo(plan: Plan, device: Device): Unit = {
+    if (plan.motions.isEmpty) {
+      println(f"Empty plan")
+      return
+    }
     println(f"Estimated duration: ${Util.formatDuration(plan.duration)}")
 
     // The first motion is from (0,0) to the first point of the first pen-down motion; the last motion is from the last
@@ -177,7 +193,7 @@ object Main {
           ebb.disableMotors()
           println("Pen up and motors disabled, move to home.")
           println("Press [enter] to plot.")
-          io.StdIn.readLine()
+          scala.io.StdIn.readLine()
 
           val begin = System.currentTimeMillis()
           ebb.executePlan(plan)
