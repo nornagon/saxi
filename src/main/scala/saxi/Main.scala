@@ -39,6 +39,7 @@ object Main {
   case object PlotCommand extends Command
   case object InfoCommand extends Command
   case object VersionCommand extends Command
+  case object LimpCommand extends Command
 
   case class Config(
     command: Command = null,
@@ -101,6 +102,8 @@ object Main {
 
     cmd("version").text("Print info about EBB version").action { (_, c) => c.copy(command = VersionCommand) }
 
+    cmd("limp").text("Disable the stepper motors").action { (_, c) => c.copy(command = LimpCommand) }
+
     checkConfig { c =>
       if (c.command != null) success
       else failure("Must specify a command")
@@ -115,6 +118,7 @@ object Main {
           case PlotCommand => plotCmd(config)
           case InfoCommand => infoCmd(config)
           case VersionCommand => versionCmd()
+          case LimpCommand => limpCmd()
         }
       case None =>
         // scopt already printed an error message, nothing left to do but quit
@@ -163,6 +167,8 @@ object Main {
   }
 
   def versionCmd(): Unit = withFirstEBB { ebb => println(ebb.firmwareVersion()) }
+
+  def limpCmd(): Unit = withFirstEBB(_.disableMotors())
 
   def infoCmd(config: Config): Unit = {
     val plan = planFromConfig(config)

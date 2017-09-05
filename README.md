@@ -30,11 +30,22 @@ $ saxi version
 EBBv13_and_above EB Firmware Version 2.5.3
 ```
 
-To upgrade your AxiDraw's firmware, see [here](https://github.com/evil-mad/EggBot/tree/master/EBB_firmware). 
+To upgrade your AxiDraw's firmware, see [here](https://github.com/evil-mad/EggBot/tree/master/EBB_firmware).
+
+### Commands
+
+#### plot
+Plot an SVG file.
+#### info
+Print info about what would be plotted (like a dry-run of `plot`).
+#### version
+Query the EBB's firmware version.
+#### limp
+Disable the stepper motors.
 
 ### TODO
 
-- Manual control from the command line, e.g. `saxi manual disable_motors`
+- Manual control from the command line, e.g. XY jogging, pen height
 - Expose more tooling profile parameters as configuration options
 
 ### Credits
