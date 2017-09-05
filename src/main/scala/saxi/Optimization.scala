@@ -3,6 +3,18 @@ package saxi
 import scala.collection.mutable
 
 object Optimization {
+  /**
+    * Joins adjacent pairs of pointLists where the first ends within tolerance of where the second begins.
+    *
+    * e.g. with tolerance >= 0.1,
+    * {{{ Seq(Seq(Vec2(0, 0), Vec2(10, 0)), Seq(Vec2(10.1, 0), Vec2(20, 0)) }}}
+    * becomes
+    * {{{ Seq(Seq(Vec2(0, 0), Vec2(20, 0))) }}}
+    *
+    * @param pointLists List of paths to join
+    * @param tolerance When the endpoints of adjacent paths are closer than this, they will be joined into one path.
+    * @return The optimized path list.
+    */
   def joinNearby(pointLists: Seq[Seq[Vec2]], tolerance: Double = 0.5): Seq[Seq[Vec2]] = {
     def maybeJoin(a: Seq[Vec2], b: Seq[Vec2]): Seq[Seq[Vec2]] = {
       if ((a.last - b.head).length <= tolerance)
@@ -17,6 +29,7 @@ object Optimization {
     pointLists.foldLeft(Seq.empty[Seq[Vec2]])(appendAndJoin)
   }
 
+  /** Reorder paths greedily, attempting to minimize the amount of pen-up travel time. */
   def optimize(pointLists: Seq[Seq[Vec2]]): Seq[Seq[Vec2]] = {
     if (pointLists.isEmpty) return pointLists
     def distBetween(i: Int, j: Int): Double = {

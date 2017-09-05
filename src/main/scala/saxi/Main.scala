@@ -5,14 +5,6 @@ import java.io.File
 import saxi.Planning.{Plan, XYMotion}
 
 object Main {
-  def scaleToPaper(pointLists: Seq[Seq[Vec2]], paperSize: PaperSize, marginMm: Double): Seq[Seq[Vec2]] = {
-    Util.scaleToFit(
-      pointLists,
-      Vec2(marginMm, marginMm),
-      paperSize.size - Vec2(marginMm, marginMm)
-    )
-  }
-
   // "WxHin", "W x H mm" and friends
   private val paperSizeString = "(\\d+(?:\\.\\d+)?)\\s*x\\s*(\\d+(?:\\.\\d+)?)\\s*(in|mm|cm)".r
   private val lengthString = "(\\d+(?:\\.\\d+)?)\\s*(in|mm|cm)".r
@@ -64,7 +56,7 @@ object Main {
       .children(
         arg[File]("<art.svg>")
           .required()
-          .action { case (artFile, c: Config) => c.copy(artFile = artFile) },
+          .action { (artFile, c) => c.copy(artFile = artFile) },
         opt[PaperSize]('s', "paper-size")
           .required()
           .valueName(s"<WxHmm|WxHin|${PaperSize.byName.keys.mkString("|")}>")
@@ -92,7 +84,7 @@ object Main {
       .children(
         arg[File]("<art.svg>")
           .required()
-          .action { case (artFile, c: Config) => c.copy(artFile = artFile) },
+          .action { (artFile, c) => c.copy(artFile = artFile) },
         opt[PaperSize]('s', "paper-size")
           .required()
           .valueName(s"<WxHmm|WxHin|${PaperSize.byName.keys.mkString("|")}>")
@@ -136,7 +128,7 @@ object Main {
     }
 
     val scaledPointLists =
-      scaleToPaper(pointLists, config.paperSize, marginMm = config.marginMm)
+      Util.scaleToPaper(pointLists, config.paperSize, marginMm = config.marginMm)
         .map(_.map(_ * config.device.stepsPerMm))
 
     Planning.plan(scaledPointLists, config.toolingProfile)
@@ -160,15 +152,17 @@ object Main {
           |  ${min.y / device.stepsPerMm}%.2f - ${max.y / device.stepsPerMm}%.2f mm in Y""".stripMargin)
   }
 
-  def versionCmd(): Unit = {
+  def withFirstEBB(f: OpenEBB => Unit): Unit = {
     EBB.findFirst match {
       case Some(port) =>
-        port.open { ebb => println(ebb.firmwareVersion()) }
+        port.open(f)
       case None =>
         println("[ERROR] Couldn't find a connected EiBotBoard.")
         sys.exit(1)
     }
   }
+
+  def versionCmd(): Unit = withFirstEBB { ebb => println(ebb.firmwareVersion()) }
 
   def infoCmd(config: Config): Unit = {
     val plan = planFromConfig(config)
@@ -179,33 +173,26 @@ object Main {
     val plan = planFromConfig(config)
     printInfo(plan, config.device)
 
-    EBB.findFirst match {
-      case Some(port) =>
-        port.open { ebb =>
-          if (!ebb.areSteppersPowered()) {
-            println("[ERROR] Device does not appear to have servo power.")
-            return
-          }
-
-          // TODO: do the motors need to be enabled to move the pen?
-          ebb.enableMotors(microsteppingMode = 5)
-          ebb.raisePen()
-          ebb.disableMotors()
-          println("Pen up and motors disabled, move to home.")
-          println("Press [enter] to plot.")
-          scala.io.StdIn.readLine()
-
-          val begin = System.currentTimeMillis()
-          ebb.executePlan(plan)
-          ebb.waitUntilMotorsIdle()
-          println(s"Plot took ${Util.formatDuration((System.currentTimeMillis() - begin) / 1000.0)}")
-
-          ebb.disableMotors()
-        }
-      case None =>
-        println("[ERROR] Couldn't find a connected EiBotBoard.")
+    withFirstEBB { ebb =>
+      if (!ebb.areSteppersPowered()) {
+        println("[ERROR] Device does not appear to have servo power.")
         sys.exit(1)
-    }
+      }
 
+      // TODO: do the motors need to be enabled to move the pen?
+      ebb.enableMotors(microsteppingMode = 5)
+      ebb.raisePen()
+      ebb.disableMotors()
+      println("Pen up and motors disabled, move to home.")
+      println("Press [enter] to plot.")
+      scala.io.StdIn.readLine()
+
+      val begin = System.currentTimeMillis()
+      ebb.executePlan(plan)
+      ebb.waitUntilMotorsIdle()
+      println(s"Plot took ${Util.formatDuration((System.currentTimeMillis() - begin) / 1000.0)}")
+
+      ebb.disableMotors()
+    }
   }
 }
