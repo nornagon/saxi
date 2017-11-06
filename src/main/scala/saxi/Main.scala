@@ -1,6 +1,8 @@
 package saxi
 
-import java.io.File
+import java.io.{File, FileInputStream}
+import java.nio.ByteBuffer
+import java.nio.file.Files
 
 import saxi.Planning.{Plan, XYMotion}
 
@@ -37,6 +39,7 @@ object Main {
 
   trait Command
   case object PlotCommand extends Command
+  case object PlanCommand extends Command
   case object InfoCommand extends Command
   case object VersionCommand extends Command
   case object LimpCommand extends Command
@@ -100,6 +103,26 @@ object Main {
           .action { (m, c) => c.copy(marginMm = m.lengthMm) },
       )
 
+    cmd("plan").action { (_, c) => c.copy(command = PlanCommand) }
+      .text("Plot an SVG file")
+      .children(
+        arg[File]("<art.svg>")
+          .required()
+          .action { (artFile, c) => c.copy(artFile = artFile) },
+        opt[PaperSize]('s', "paper-size")
+          .required()
+          .valueName(s"<WxHmm|WxHin|${PaperSize.byName.keys.mkString("|")}>")
+          .text(s"Either WxH{in,cm,mm} or a standard size. Supported sizes: ${PaperSize.supported}.")
+          .action { (ps, c) => c.copy(paperSize = ps) },
+        opt[Unit]("portrait")
+          .text("If present, the paper has its short side in the X direction. Will not flip the drawing. Defaults to landscape.")
+          .action { (_, c) => c.copy(paperSize = c.paperSize.portrait) },
+        opt[Length]('m', "margin")
+          .valueName("<Xmm|Xin>")
+          .text("Margin to leave at paper edge. Defaults to 20mm.")
+          .action { (m, c) => c.copy(marginMm = m.lengthMm) }
+      )
+
     cmd("version").text("Print info about EBB version").action { (_, c) => c.copy(command = VersionCommand) }
 
     cmd("limp").text("Disable the stepper motors").action { (_, c) => c.copy(command = LimpCommand) }
@@ -116,6 +139,7 @@ object Main {
       case Some(config) =>
         config.command match {
           case PlotCommand => plotCmd(config)
+          case PlanCommand => planCmd(config)
           case InfoCommand => infoCmd(config)
           case VersionCommand => versionCmd()
           case LimpCommand => limpCmd()
@@ -126,16 +150,25 @@ object Main {
   }
 
   def planFromConfig(config: Config): Plan = {
-    val pointLists = Optimization.optimize(SVG.readSVG(config.artFile))
-    if (pointLists.isEmpty) {
-      return Plan(Seq.empty)
+    val firstByte = new FileInputStream(config.artFile).read()
+    if (firstByte == '<') {
+      val lines = SVG.readSVG(config.artFile)
+      println(f"Planning ${lines.size} lines...")
+      val pointLists = Optimization.optimize(lines)
+      if (pointLists.isEmpty) {
+        return Plan(Seq.empty)
+      }
+
+      val scaledPointLists =
+        Util.scaleToPaper(pointLists, config.paperSize, marginMm = config.marginMm)
+          .map(_.map(_ * config.device.stepsPerMm))
+
+      Planning.plan(scaledPointLists, config.toolingProfile)
+    } else {
+      import boopickle.Default._
+      val bytes = Files.readAllBytes(config.artFile.toPath)
+      Unpickle[Planning.Plan].fromBytes(ByteBuffer.wrap(bytes))
     }
-
-    val scaledPointLists =
-      Util.scaleToPaper(pointLists, config.paperSize, marginMm = config.marginMm)
-        .map(_.map(_ * config.device.stepsPerMm))
-
-    Planning.plan(scaledPointLists, config.toolingProfile)
   }
 
   def printInfo(plan: Plan, device: Device): Unit = {
@@ -173,6 +206,16 @@ object Main {
   def infoCmd(config: Config): Unit = {
     val plan = planFromConfig(config)
     printInfo(plan, config.device)
+  }
+
+  def planCmd(config: Config): Unit = {
+    val plan = planFromConfig(config)
+    printInfo(plan, config.device)
+    import boopickle.Default._
+    val planBytes = Pickle.intoBytes(plan)
+    val planPath = config.artFile.toPath.resolveSibling(s"${config.artFile.getName}.plan")
+    Files.write(planPath, planBytes.array())
+    println(s"Plan written to $planPath")
   }
 
   def plotCmd(config: Config): Unit = {

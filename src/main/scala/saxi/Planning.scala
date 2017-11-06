@@ -1,7 +1,5 @@
 package saxi
 
-import scala.annotation.tailrec
-import scala.collection.mutable.ArrayBuffer
 import scala.collection.{Searching, mutable}
 
 /**
@@ -27,7 +25,7 @@ object Planning {
     }
   }
 
-  trait Motion {
+  sealed trait Motion {
     def duration: Double
   }
 

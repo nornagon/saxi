@@ -10,8 +10,6 @@ lazy val root = (project in file(".")).
       version      := "0.1.0-SNAPSHOT"
     )),
     name := "Saxi",
-    //javaOptions in run += "-Djava.library.path=lib/native",
-    //fork in run := true,
     libraryDependencies ++= Seq(
       scalaTest % Test,
       jSerialComm,
@@ -20,6 +18,13 @@ lazy val root = (project in file(".")).
       "org.apache.xmlgraphics" % "batik-anim" % "1.9.1",
       "org.apache.xmlgraphics" % "batik-svg-dom" % "1.9.1",
       "org.apache.xmlgraphics" % "batik-gvt" % "1.9.1",
-      "com.github.scopt" %% "scopt" % "3.7.0"
+      "com.github.scopt" %% "scopt" % "3.7.0",
+      "io.suzaku" %% "boopickle" % "1.2.6",
+    ),
+    // In classic Java maximalist style, the Batik SVG parser depends on TWO
+    // OTHER WHOLE PROGRAMMING LANGUAGES. You can't make this stuff up.
+    excludeDependencies ++= Seq(
+      ExclusionRule("org.python", "jython"),
+      ExclusionRule("org.mozilla", "rhino"),
     )
   )
