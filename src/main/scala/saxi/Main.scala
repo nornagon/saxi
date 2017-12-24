@@ -230,7 +230,7 @@ object Main {
 
       // TODO: do the motors need to be enabled to move the pen?
       ebb.enableMotors(microsteppingMode = 5)
-      ebb.setPenHeight(config.toolingProfile.penUpPos, 10)
+      ebb.setPenHeight(config.toolingProfile.penUpPos, 1000)
       ebb.disableMotors()
       println("Pen up and motors disabled, move to home.")
       println("Press [enter] to plot.")
