@@ -237,19 +237,23 @@ class OpenEBB(port: SerialPort) {
     else executeXYMotionWithXM(plan)
   }
 
+  def executePenMotion(pm: PenMotion): Unit = {
+    val clocksMoved = (pm.finalPos - pm.initialPos).abs
+    val rate = clocksMoved * 24 / (pm.duration * 1000)
+    setPenHeight(pm.finalPos, rate.round.toInt, (pm.duration * 1000).round.toInt)
+  }
+
+  def executeMotion(m: Planning.Motion): Unit = {
+    m match {
+      case xy: XYMotion => executeXYMotion(xy)
+      case pm: PenMotion => executePenMotion(pm)
+    }
+  }
+
   def executePlan(plan: Plan, microsteppingMode: Int = 2): Unit = {
     enableMotors(microsteppingMode)
 
-    for (motion <- plan.motions) {
-      motion match {
-        case xy: XYMotion =>
-          executeXYMotion(xy)
-        case pm: PenMotion =>
-          val clocksMoved = (pm.finalPos - pm.initialPos).abs
-          val rate = clocksMoved * 24 / (pm.duration * 1000)
-          setPenHeight(pm.finalPos, rate.round.toInt, (pm.duration * 1000).round.toInt)
-      }
-    }
+    plan.motions foreach executeMotion
   }
 
   def waitUntilMotorsIdle(): Unit = {
@@ -311,15 +315,20 @@ class EBB(port: SerialPort) {
     }
   }
 
-  def open(f: OpenEBB => Unit): Unit = {
+  def open(): OpenEBB = {
     if (!port.openPort()) {
       throw new RuntimeException(s"Couldn't open serial device ${port.getSystemPortName}")
     }
     // TODO: set the timeout dynamically according to the expected duration of the command being executed
     port.setComPortTimeouts(SerialPort.TIMEOUT_READ_SEMI_BLOCKING|SerialPort.TIMEOUT_WRITE_BLOCKING, 5000, 5000)
     exhaust()
+    new OpenEBB(port)
+  }
+
+  def open(f: OpenEBB => Unit): Unit = {
+    val openebb = open()
     try {
-      f(new OpenEBB(port))
+      f(openebb)
     } finally {
       if (!port.closePort()) {
         throw new RuntimeException(s"Couldn't close serial device ${port.getSystemPortName}")

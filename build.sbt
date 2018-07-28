@@ -34,9 +34,19 @@ lazy val cli = (project in file("cli")).
     libraryDependencies ++= Seq(
       "com.github.scopt" %% "scopt" % "3.7.0",
       "io.suzaku" %% "boopickle" % "1.2.6",
+      "com.typesafe.akka" %% "akka-http-core" % "10.0.11",
     ),
   )
   .enablePlugins(JavaAppPackaging)
   .dependsOn(core)
 
-lazy val server = (project in file("server"))
+lazy val server = (project in file("server")).
+  settings(
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-http" % "10.0.11",
+      "com.typesafe.akka" %% "akka-stream" % "2.5.8",
+      "io.suzaku" %% "boopickle" % "1.2.6",
+    )
+  )
+  .enablePlugins(JavaAppPackaging)
+  .dependsOn(core)

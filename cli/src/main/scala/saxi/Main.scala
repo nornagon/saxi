@@ -6,6 +6,9 @@ import java.nio.file.Files
 
 import saxi.Planning.{Plan, XYMotion}
 
+import scala.concurrent.ExecutionContextExecutor
+import scala.util.{Failure, Success}
+
 object Main {
   // "WxHin", "W x H mm" and friends
   private val paperSizeString = "(\\d+(?:\\.\\d+)?)\\s*x\\s*(\\d+(?:\\.\\d+)?)\\s*(in|mm|cm)".r
@@ -51,6 +54,7 @@ object Main {
     marginMm: Double = 20,
     toolingProfile: ToolingProfile = ToolingProfile.AxidrawFast,
     device: Device = Device.Axidraw,
+    remoteAddress: Option[String] = None
   )
   val parser = new scopt.OptionParser[Config](programName = "saxi") {
     head("saxi", "0.9")
@@ -80,7 +84,11 @@ object Main {
         opt[Double]("pen-down")
           .valueName("<PenDown%>")
           .text("% of servo range for pen down height")
-          .action { (p, c) => c.copy(toolingProfile = c.toolingProfile.copy(penDownPos = c.device.penPctToPos(p))) }
+          .action { (p, c) => c.copy(toolingProfile = c.toolingProfile.copy(penDownPos = c.device.penPctToPos(p))) },
+        opt[String]('r', "remote")
+          .valueName("<SaxiServerAddress>")
+          .text("Address of remote saxi server to send the plan to")
+          .action { (p, c) => c.copy(remoteAddress = Some(p)) },
       )
 
     cmd("info").action { (_, c) => c.copy(command = InfoCommand) }
@@ -222,26 +230,60 @@ object Main {
     val plan = planFromConfig(config)
     printInfo(plan, config.device)
 
-    withFirstEBB { ebb =>
-      if (!ebb.areSteppersPowered()) {
-        println("[ERROR] Device does not appear to have servo power.")
-        sys.exit(1)
+    if (config.remoteAddress.isDefined) {
+      import akka.actor.ActorSystem
+      import akka.http.scaladsl.Http
+      import akka.http.scaladsl.model._
+      import boopickle.Default._
+
+      implicit val system: ActorSystem = ActorSystem()
+      implicit val ec: ExecutionContextExecutor = system.dispatcher
+
+      val bytes = Pickle.intoBytes(plan)
+      val entity = HttpEntity(bytes.array())
+
+      Http().singleRequest(HttpRequest(
+        uri = "http://" + config.remoteAddress.get + "/prepare",
+        method = HttpMethods.POST,
+        entity = HttpEntity(Pickle.intoBytes(config.toolingProfile).array())
+      )).onComplete {
+        case Success(_) =>
+          println("Pen up and motors disabled, move to home.")
+          println("Press [enter] to plot.")
+          scala.io.StdIn.readLine()
+          println("Beginning plot...")
+          Http().singleRequest(HttpRequest(
+            uri = "http://" + config.remoteAddress.get + "/plot",
+            method = HttpMethods.POST,
+            entity = entity
+          )).onComplete {
+            case Success(s) => println(s"plot complete $s"); system.terminate()
+            case Failure(e) => system.terminate(); sys.error(s"aoeu: $e")
+          }
+        case Failure(e) => system.terminate(); sys.error(s"Error connecting to remote server: $e")
       }
+    } else {
+      withFirstEBB { ebb =>
+        if (!ebb.areSteppersPowered()) {
+          println("[ERROR] Device does not appear to have servo power.")
+          sys.exit(1)
+        }
 
-      // TODO: do the motors need to be enabled to move the pen?
-      ebb.enableMotors(microsteppingMode = 5)
-      ebb.setPenHeight(config.toolingProfile.penUpPos, 1000)
-      ebb.disableMotors()
-      println("Pen up and motors disabled, move to home.")
-      println("Press [enter] to plot.")
-      scala.io.StdIn.readLine()
+        // TODO: do the motors need to be enabled to move the pen?
+        ebb.enableMotors(microsteppingMode = 5)
+        ebb.setPenHeight(config.toolingProfile.penUpPos, 1000)
+        ebb.disableMotors()
+        println("Pen up and motors disabled, move to home.")
+        println("Press [enter] to plot.")
+        scala.io.StdIn.readLine()
 
-      val begin = System.currentTimeMillis()
-      ebb.executePlan(plan)
-      ebb.waitUntilMotorsIdle()
-      println(s"Plot took ${Util.formatDuration((System.currentTimeMillis() - begin) / 1000.0)}")
+        val begin = System.currentTimeMillis()
+        ebb.executePlan(plan)
+        ebb.waitUntilMotorsIdle()
+        println(s"Plot took ${Util.formatDuration((System.currentTimeMillis() - begin) / 1000.0)}")
 
-      ebb.disableMotors()
+        ebb.disableMotors()
+      }
     }
   }
 }
