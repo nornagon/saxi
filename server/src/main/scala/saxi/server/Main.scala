@@ -131,16 +131,22 @@ object Main {
     }
   }
 
-  def main(args: Array[String]) {
-    ebb = EBB.findFirst.get.open()
-    val bindingFuture = Http().bindAndHandle(route, "0.0.0.0", port)
-    bindingFuture.onComplete {
-      case Success(binding) =>
-        val localAddress = binding.localAddress
-        println(s"Server is listening on ${localAddress.getHostName}:${localAddress.getPort}")
-      case Failure(e) =>
-        println(s"Binding failed with ${e.getMessage}")
+  def main(args: Array[String]): Unit = {
+    try {
+      ebb = EBB.findFirst.get.open()
+      val bindingFuture = Http().bindAndHandle(route, "0.0.0.0", port)
+      bindingFuture.onComplete {
+        case Success(binding) =>
+          val localAddress = binding.localAddress
+          println(s"Server is listening on ${localAddress.getHostName}:${localAddress.getPort}")
+        case Failure(e) =>
+          println(s"Binding failed with ${e.getMessage}")
+          system.terminate()
+      }
+    } catch {
+      case t: Throwable =>
         system.terminate()
+        throw t
     }
   }
 }
