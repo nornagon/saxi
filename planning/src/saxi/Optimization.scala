@@ -65,7 +65,7 @@ object Optimization {
   /*
   def optimizeOrtools(pointLists: Seq[Seq[Vec2]], timeLimit: Option[Int] = None): Seq[Seq[Vec2]] = {
     System.loadLibrary("jniortools")
-    import com.google.ortools.constraintsolver.RoutingModel
+    import com.google.ortools.constraintsolver._
     def distBetween(i: Int, j: Int): Double = {
       if (i == j) return 0
       val a = pointLists(i/2)
@@ -91,6 +91,7 @@ object Optimization {
       .mergeFrom(RoutingModel.defaultSearchParameters())
       .setLogSearch(true)
       .setFirstSolutionStrategy(FirstSolutionStrategy.Value.PATH_CHEAPEST_ARC)
+      .setLocalSearchMetaheuristic(LocalSearchMetaheuristic.Value.SIMULATED_ANNEALING)
     timeLimit match {
       case Some(lim) => parametersBuilder.setTimeLimitMs(lim)
       case None => parametersBuilder.setSolutionLimit(1)

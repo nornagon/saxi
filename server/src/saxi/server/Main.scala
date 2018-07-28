@@ -107,7 +107,7 @@ object Main {
           }
         }
       }
-    } ~ path("plotB") {
+    } ~ path("plot") {
       withoutSizeLimit {
         post {
           entity(as[Array[Byte]]) { bytes =>
