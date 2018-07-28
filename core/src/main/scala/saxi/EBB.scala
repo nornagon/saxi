@@ -283,6 +283,10 @@ class OpenEBB(port: SerialPort) {
     vInVoltage > 6
   }
 
+  def queryButton(): Boolean = {
+    queryM("QB").head == "1"
+  }
+
   /**
     * Query the firmware version running on the EBB.
     *
