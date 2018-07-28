@@ -1,14 +1,32 @@
-import mill._, scalalib._
+import mill._, scalalib._, scalajslib._
 
 trait CommonModule extends ScalaModule {
   def scalaVersion = "2.12.4"
 }
 
-object util extends CommonModule {
+object util extends Module {
+  def utilSourcePath = millSourcePath
+  object js extends CommonModule with ScalaJSModule {
+    override def millSourcePath = utilSourcePath
+    def scalaJSVersion = "0.6.24"
+
+    override def sources = T.sources(
+      millSourcePath / "src",
+      millSourcePath / "src-js",
+    )
+  }
+  object jvm extends CommonModule {
+    override def millSourcePath = utilSourcePath
+
+    override def sources = T.sources(
+      millSourcePath / "src",
+      millSourcePath / "src-jvm",
+    )
+  }
 }
 
 object svg extends CommonModule {
-  override def moduleDeps = Seq(util)
+  override def moduleDeps = Seq(util.jvm)
   override def ivyDeps = Agg(
     ivy"org.apache.xmlgraphics:batik-parser:1.9.1",
     ivy"org.apache.xmlgraphics:batik-bridge:1.9.1",
@@ -21,19 +39,46 @@ object svg extends CommonModule {
     .map(_.exclude(("org.python", "jython"), ("org.mozilla", "rhino")))
 }
 
-object planning extends CommonModule {
-  override def moduleDeps = Seq(util)
+object planning extends Module {
+  def planningSourcePath = millSourcePath
+
+  object js extends CommonModule with ScalaJSModule {
+    override def millSourcePath = planningSourcePath
+    def scalaJSVersion = "0.6.24"
+
+    override def moduleDeps = Seq(util.js)
+
+    override def sources = T.sources(
+      millSourcePath / "src",
+      millSourcePath / "src-js",
+    )
+  }
+  object jvm extends CommonModule {
+    override def millSourcePath = planningSourcePath
+
+    override def moduleDeps = Seq(util.jvm)
+    /*
+    override def compileIvyDeps = Agg(
+      ivy"org.scala-js::scalajs-stubs:0.6.24"
+    )
+    */
+
+    override def sources = T.sources(
+      millSourcePath / "src",
+      millSourcePath / "src-jvm",
+    )
+  }
 }
 
 object driver extends CommonModule {
-  override def moduleDeps = Seq(util, planning)
+  override def moduleDeps = Seq(util.jvm, planning.jvm)
   override def ivyDeps = Agg(
     ivy"com.fazecast:jSerialComm:1.3.11",
   )
 }
 
 object server extends CommonModule {
-  override def moduleDeps = Seq(driver, planning)
+  override def moduleDeps = Seq(driver, planning.jvm)
   override def ivyDeps = Agg(
     ivy"com.typesafe.akka::akka-http:10.0.11",
     ivy"com.typesafe.akka::akka-stream:2.5.8",
@@ -43,7 +88,7 @@ object server extends CommonModule {
 }
 
 object cli extends CommonModule {
-  override def moduleDeps = Seq(util, driver, svg, planning)
+  override def moduleDeps = Seq(util.jvm, driver, svg, planning.jvm)
   override def ivyDeps = Agg(
     ivy"com.github.scopt::scopt:3.7.0",
     ivy"com.typesafe.akka::akka-http-core:10.0.11",
