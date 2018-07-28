@@ -157,25 +157,24 @@ object Main {
     }
   }
 
-  def planFromConfig(config: Config): Plan = {
+  def pathsFromConfig(config: Config): Seq[Seq[Vec2]] = {
     val firstByte = new FileInputStream(config.artFile).read()
     if (firstByte == '<') {
       val lines = SVG.readSVG(config.artFile)
       println(f"Planning ${lines.size} lines...")
       val pointLists = Optimization.optimize(lines)
       if (pointLists.isEmpty) {
-        return Plan(Seq.empty)
+        return Seq.empty
       }
 
       val scaledPointLists =
         Util.scaleToPaper(pointLists, config.paperSize, marginMm = config.marginMm)
           .map(_.map(_ * config.device.stepsPerMm))
-
-      Planning.plan(scaledPointLists, config.toolingProfile)
+      scaledPointLists
     } else {
       import boopickle.Default._
       val bytes = Files.readAllBytes(config.artFile.toPath)
-      Unpickle[Planning.Plan].fromBytes(ByteBuffer.wrap(bytes))
+      Unpickle[Seq[Seq[Vec2]]].fromBytes(ByteBuffer.wrap(bytes))
     }
   }
 
@@ -212,12 +211,14 @@ object Main {
   def limpCmd(): Unit = withFirstEBB(_.disableMotors())
 
   def infoCmd(config: Config): Unit = {
-    val plan = planFromConfig(config)
+    val paths = pathsFromConfig(config)
+    val plan = Planning.plan(paths, config.toolingProfile)
     printInfo(plan, config.device)
   }
 
   def planCmd(config: Config): Unit = {
-    val plan = planFromConfig(config)
+    val paths = pathsFromConfig(config)
+    val plan = Planning.plan(paths, config.toolingProfile)
     printInfo(plan, config.device)
     import boopickle.Default._
     val planBytes = Pickle.intoBytes(plan)
@@ -227,7 +228,8 @@ object Main {
   }
 
   def plotCmd(config: Config): Unit = {
-    val plan = planFromConfig(config)
+    val paths = pathsFromConfig(config)
+    val plan = Planning.plan(paths, config.toolingProfile)
     printInfo(plan, config.device)
 
     if (config.remoteAddress.isDefined) {
