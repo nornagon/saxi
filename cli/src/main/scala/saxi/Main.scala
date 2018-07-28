@@ -54,6 +54,7 @@ object Main {
     marginMm: Double = 20,
     toolingProfile: ToolingProfile = ToolingProfile.AxidrawFast,
     device: Device = Device.Axidraw,
+    optimize: Boolean = true,
     remoteAddress: Option[String] = None
   )
   val parser = new scopt.OptionParser[Config](programName = "saxi") {
@@ -89,6 +90,9 @@ object Main {
           .valueName("<SaxiServerAddress>")
           .text("Address of remote saxi server to send the plan to")
           .action { (p, c) => c.copy(remoteAddress = Some(p)) },
+        opt[Boolean]("no-optimize")
+          .text("Don't optimize path segments for minimal pen-up travel distance")
+          .action { (_, c) => c.copy(optimize = false) },
       )
 
     cmd("info").action { (_, c) => c.copy(command = InfoCommand) }
@@ -109,6 +113,9 @@ object Main {
           .valueName("<Xmm|Xin>")
           .text("Margin to leave at paper edge. Defaults to 20mm.")
           .action { (m, c) => c.copy(marginMm = m.lengthMm) },
+        opt[Int]("no-optimize")
+          .text("Don't optimize path segments for minimal pen-up travel distance")
+          .action { (_, c) => c.copy(optimize = false) },
       )
 
     cmd("plan").action { (_, c) => c.copy(command = PlanCommand) }
@@ -162,7 +169,9 @@ object Main {
     if (firstByte == '<') {
       val lines = SVG.readSVG(config.artFile)
       println(f"Planning ${lines.size} lines...")
-      val pointLists = Optimization.optimize(lines)
+      val pointLists = if (config.optimize) {
+        Optimization.optimize(lines)
+      } else lines
       if (pointLists.isEmpty) {
         return Seq.empty
       }
