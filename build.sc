@@ -1,4 +1,5 @@
 import mill._, scalalib._, scalajslib._
+import ammonite.ops._
 
 trait CommonModule extends ScalaModule {
   def scalaVersion = "2.12.4"
@@ -17,6 +18,9 @@ object util extends Module {
   }
   object jvm extends CommonModule {
     override def millSourcePath = utilSourcePath
+    override def compileIvyDeps = Agg(
+      ivy"org.scala-js::scalajs-stubs:0.6.24"
+    )
 
     override def sources = T.sources(
       millSourcePath / "src",
@@ -57,11 +61,9 @@ object planning extends Module {
     override def millSourcePath = planningSourcePath
 
     override def moduleDeps = Seq(util.jvm)
-    /*
     override def compileIvyDeps = Agg(
       ivy"org.scala-js::scalajs-stubs:0.6.24"
     )
-    */
 
     override def sources = T.sources(
       millSourcePath / "src",
@@ -77,12 +79,57 @@ object driver extends CommonModule {
   )
 }
 
+object driverJs extends CommonModule with ScalaJSModule {
+  def scalaJSVersion = "0.6.24"
+  override def moduleDeps = Seq(planning.js, protocol.js)
+  override def ivyDeps = Agg(
+    ivy"io.suzaku::boopickle::1.2.6",
+    ivy"org.scala-js::scalajs-dom::0.9.2",
+  )
+}
+
+object protocol extends Module {
+  def protocolSourcePath = millSourcePath
+
+  object js extends CommonModule with ScalaJSModule {
+    override def millSourcePath = protocolSourcePath
+    def scalaJSVersion = "0.6.24"
+
+    override def sources = T.sources(
+      millSourcePath / "src",
+      millSourcePath / "src-js",
+    )
+  }
+  object jvm extends CommonModule {
+    override def millSourcePath = protocolSourcePath
+
+    override def sources = T.sources(
+      millSourcePath / "src",
+      millSourcePath / "src-jvm",
+    )
+  }
+}
+
 object server extends CommonModule {
-  override def moduleDeps = Seq(driver, planning.jvm)
+  override def moduleDeps = Seq(driver, protocol.jvm, planning.jvm)
   override def ivyDeps = Agg(
     ivy"com.typesafe.akka::akka-http:10.0.11",
     ivy"com.typesafe.akka::akka-stream:2.5.8",
     ivy"io.suzaku::boopickle:1.2.6",
+  )
+  def jsResources = T {
+    val outPath = T.ctx().dest / 'js
+    mkdir(outPath)
+    cp(
+      driverJs.fastOpt().path,
+      outPath / "driver.js"
+    )
+    outPath
+  }
+  override def resources = T.sources(
+    millSourcePath / 'resources,
+    jsResources() / RelPath.up
+    //driverJs.fastOpt().path / RelPath.up
   )
   override def mainClass = Some("saxi.server.Main")
 }

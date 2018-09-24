@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>saxi</title>
+    <script src="/js/path-data-polyfill.js"></script>
+    <script src="/js/driver.js"></script>
+<style>
+path {
+  stroke: black;
+  fill: transparent;
+}
+svg {
+  box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.2);
+}
+</style>
+  </head>
+  <body>
+    <div>
+      pen up:
+      <input type="number" id="penUpHeight" min="0" max="100" value="50"/>
+    </div>
+    <div>
+      pen down:
+      <input type="number" id="penDownHeight" min="0" max="100" value="60"/>
+    </div>
+    <div>
+      <button id="penUp">pen up</button>
+      <button id="penDown">pen down</button>
+    </div>
+    <div>
+      <select id="paperSizeSelector">
+      </select>
+      <input type="number" id="paperSizeWidth"/> &times; <input type="number" id="paperSizeHeight"/> mm
+      <label><input type="checkbox" checked id="landscape"> landscape</label>
+    </div>
+    <div>
+      margin: <input type="number" id="marginMm" value="20"/> mm
+    </div>
+    <div>
+      <button id="limp">limp</button>
+    </div>
+    <div id="stats"></div>
+    <div>
+      <svg id="planPreview" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"></svg>
+    </div>
+    <div>
+      <button id="doPlot" disabled>plot</button>
+      <button id="doCancel">cancel</button>
+    </div>
+    <script>
+      const svgNS = "http://www.w3.org/2000/svg";  
+      Object.keys(Planning.paperSizes).forEach(name => {
+        const option = document.createElement('option')
+        option.textContent = name
+        paperSizeSelector.appendChild(option)
+      })
+      function setPaperSize(ps) {
+        paperSizeWidth.value = ps.size.x
+        paperSizeHeight.value = ps.size.y
+        planPreview.setAttribute('width', ps.size.x * scale)
+        planPreview.setAttribute('height', ps.size.y * scale)
+        planPreview.setAttribute('viewBox', `0 0 ${ps.size.x} ${ps.size.y}`)
+      }
+      paperSizeSelector.addEventListener('change', e => {
+        let ps = Planning.paperSizes[e.target.value]
+        if (landscape.checked) ps = ps.landscape
+        else ps = ps.portrait
+        setPaperSize(ps)
+      })
+      landscape.addEventListener('change', e => {
+        let ps = PaperSize(Vec2(Number(paperSizeWidth.value), Number(paperSizeHeight.value)))
+        if (landscape.checked) ps = ps.landscape
+        else ps = ps.portrait
+        setPaperSize(ps)
+      })
+      paperSizeSelector.value = 'ArchA'
+
+      const scale = 3 /* px/mm */
+
+      document.body.addEventListener('drop', e => {
+        e.preventDefault()
+        const item = e.dataTransfer.items[0]
+        const file = item.getAsFile()
+        const reader = new FileReader()
+        reader.onload = e => readSvg(reader.result)
+        reader.readAsText(file)
+      })
+      document.body.addEventListener('dragover', e => {
+        e.preventDefault()
+      })
+
+      setPaperSize(Planning.paperSizes.ArchA.landscape)
+
+      function isFlatEnough([x0, y0, x1, y1, x2, y2, x3, y3], flatness) {
+        // https://github.com/paperjs/paper.js/blob/a61e83edf2ed1870bd41bad135f4f6fc85b0f628/src/path/Curve.js#L806
+        const ux = 3 * x1 - 2 * x0 - x3,
+              uy = 3 * y1 - 2 * y0 - y3,
+              vx = 3 * x2 - 2 * x3 - x0,
+              vy = 3 * y2 - 2 * y3 - y0;
+        return Math.max(ux * ux, vx * vx) + Math.max(uy * uy, vy * vy)
+                <= 16 * flatness * flatness;
+      }
+
+      function subdivide([x0, y0, x1, y1, x2, y2, x3, y3], t) {
+        // https://github.com/paperjs/paper.js/blob/a61e83edf2ed1870bd41bad135f4f6fc85b0f628/src/path/Curve.js#L606
+        if (t === undefined)
+            t = 0.5;
+        // Triangle computation, with loops unrolled.
+        let u = 1 - t,
+            // Interpolate from 4 to 3 points
+            x4 = u * x0 + t * x1, y4 = u * y0 + t * y1,
+            x5 = u * x1 + t * x2, y5 = u * y1 + t * y2,
+            x6 = u * x2 + t * x3, y6 = u * y2 + t * y3,
+            // Interpolate from 3 to 2 points
+            x7 = u * x4 + t * x5, y7 = u * y4 + t * y5,
+            x8 = u * x5 + t * x6, y8 = u * y5 + t * y6,
+            // Interpolate from 2 points to 1 point
+            x9 = u * x7 + t * x8, y9 = u * y7 + t * y8;
+        // We now have all the values we need to build the sub-curves:
+        return [
+            [x0, y0, x4, y4, x7, y7, x9, y9], // left
+            [x9, y9, x8, y8, x6, y6, x3, y3] // right
+        ];
+      }
+
+      function flatten(v, flatness, maxRecursion) {
+        const minSpan = 1 / (maxRecursion || 32)
+        const parts = []
+
+        function computeParts(curve, t1, t2) {
+          if ((t2 - t1) > minSpan && !isFlatEnough(curve, flatness) /* && !isStraight(curve) */) {
+            const halves = subdivide(curve, 0.5);
+            const tMid = (t1 + t2) / 2;
+            computeParts(halves[0], t1, tMid);
+            computeParts(halves[1], tMid, t2);
+          } else {
+            const dx = curve[6] - curve[0];
+            const dy = curve[7] - curve[1];
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > 0) {
+              parts.push(curve)
+            }
+          }
+        }
+
+        computeParts(v, 0, 1)
+
+        return parts
+      }
+
+      function readSvg(svgString) {
+        const div = document.createElement('div')
+        div.style.position = 'absolute'
+        div.style.left = '99999px'
+        document.body.appendChild(div)
+        try {
+          div.innerHTML = svgString
+          const svg = div.querySelector('svg')
+          const svgPoint = svg.createSVGPoint()
+          const paths = []
+          for (const path of svg.querySelectorAll('path')) {
+            const ctm = path.getCTM()
+            const xf = ([x,y]) => { svgPoint.x = x; svgPoint.y = y;
+              const xfd = svgPoint.matrixTransform(ctm); return [xfd.x, xfd.y] }
+            let cur = null
+            let closePoint = null
+            for (const cmd of path.getPathData({normalize: true})) {
+              if (cmd.type === 'M') {
+                cur = xf(cmd.values)
+                closePoint = cur
+                paths.push([cur])
+              } else if (cmd.type === 'L') {
+                cur = xf(cmd.values)
+                paths[paths.length-1].push(cur)
+              } else if (cmd.type === 'C') {
+                const [x1, y1, x2, y2, x3, y3] = cmd.values
+                const [x0, y0] = cur
+                const [tx1, ty1] = xf([x1, y1])
+                const [tx2, ty2] = xf([x2, y2])
+                const [tx3, ty3] = xf([x3, y3])
+                const parts = flatten([x0, y0, tx1, ty1, tx2, ty2, tx3, ty3], 0.1)
+                for (const part of parts) {
+                  paths[paths.length-1].push([part[6], part[7]])
+                }
+                cur = [tx3, ty3]
+              } else if (cmd.type === 'Z') {
+                if (closePoint && (cur[0] !== closePoint[0] || cur[1] !== closePoint[1])) {
+                  paths[paths.length-1].push(closePoint)
+                }
+              } else {
+                throw Error("um")
+              }
+            }
+          }
+          const penUpPct = Number(penUpHeight.value)
+          const penUpPos = Device.Axidraw.penPctToPos(penUpPct)
+          const penDownPct = Number(penDownHeight.value)
+          const penDownPos = Device.Axidraw.penPctToPos(penDownPct)
+          const paperSize = PaperSize(Vec2(Number(paperSizeWidth.value), Number(paperSizeHeight.value)))
+          const scaledToPaper = Planning.scaleToPaper(paths, paperSize, Number(marginMm.value))
+          const optimized = Planning.optimize(scaledToPaper)
+          const {stepsPerMm} = Device.Axidraw
+          const inSteps = optimized.map(ps => ps.map(p => [p[0] * stepsPerMm, p[1] * stepsPerMm]))
+          const plan = Planning.plan(inSteps, penUpPos, penDownPos)
+          setPlan(plan, paperSize)
+          window.plan = plan
+        } finally {
+          div.remove()
+        }
+      }
+      document.onpaste = e => {
+        e.clipboardData.items[0].getAsString(s => readSvg(s))
+      }
+      function setPlan(plan, paperSize) {
+        const lines = Planning.planPoints(plan)
+        window.plan = plan
+        planPreview.innerHTML = ""
+        planPreview.setAttribute('width', paperSize.size.x * scale)
+        planPreview.setAttribute('height', paperSize.size.y * scale)
+        planPreview.setAttribute('viewBox', `0 0 ${paperSize.size.x} ${paperSize.size.y}`)
+        const g = planPreview.appendChild(document.createElementNS(svgNS, "g"))
+        g.setAttribute('transform', `scale(${1 / Device.Axidraw.stepsPerMm})`)
+        let i = 0;
+        for (const line of lines) {
+          const path = document.createElementNS(svgNS, "path")
+          let d = `M${line[0].x} ${line[0].y}`
+          for (const point of line.slice(1)) {
+            d += `L${point.x} ${point.y}`
+          }
+          path.setAttribute("d", d)
+          if (i % 2 == 0) {
+            path.style.stroke = 'rgba(0, 0, 0, 0.3)'
+            path.style.strokeWidth = 0.5
+          }
+          g.appendChild(path)
+          i += 1
+        }
+
+        stats.textContent = `Duration: ${Util.formatDuration(plan.duration)}`
+        doPlot.removeAttribute('disabled')
+      }
+      function plot(plan) {
+        const pickled = Driver.picklePlan(plan)
+        fetch('/plot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: pickled,
+        }).then(res => res.json()).then(data => console.log(data))
+      }
+      function cancel() {
+        fetch('/cancel', {
+          method: 'POST',
+        }).then(res => res.json()).then(data => console.log(data))
+      }
+      d = Driver.connect()
+      penUp.onclick = e => {
+        const penUpPct = Number(penUpHeight.value)
+        const height = Device.Axidraw.penPctToPos(penUpPct)
+        d.setPenHeight(height, 1000)
+      }
+      penDown.onclick = e => {
+        const penDownPct = Number(penDownHeight.value)
+        const height = Device.Axidraw.penPctToPos(penDownPct)
+        d.setPenHeight(height, 1000)
+      }
+      limp.onclick = e => {
+        d.limp()
+      }
+      doPlot.onclick = e => {
+        plot(plan)
+      }
+      doCancel.onclick = e => cancel()
+    </script>
+  </body>
+</html>

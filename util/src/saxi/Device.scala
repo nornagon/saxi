@@ -1,5 +1,8 @@
 package saxi
 
+import scala.scalajs.js.annotation.{JSExport, JSExportAll, JSExportTopLevel}
+
+@JSExportAll
 trait Device {
   def stepsPerMm: Double
   def penServoMin: Int
@@ -7,7 +10,9 @@ trait Device {
   def penPctToPos(pct: Double): Int
 }
 
+@JSExportTopLevel("Device")
 object Device {
+  @JSExport
   val Axidraw = new Device {
     override val stepsPerMm: Double = 5
 
@@ -17,6 +22,7 @@ object Device {
     override val penServoMin: Int = 7500
     override val penServoMax: Int = 28000
 
+    @JSExport
     def penPctToPos(pct: Double): Int = {
       val t = pct / 100.0
       (penServoMin * t + penServoMax * (1 - t)).round.toInt

@@ -1,7 +1,10 @@
 package saxi
 
 import scala.collection.immutable.ListMap
+import scala.scalajs.js.annotation._
 
+@JSExportTopLevel("PaperSize")
+@JSExportAll
 case class PaperSize(
   size: Vec2
 ) {

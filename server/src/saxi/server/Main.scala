@@ -8,12 +8,14 @@ import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.ws.{Message, TextMessage}
+import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.{Flow, Source}
+import akka.util.ByteString
 import saxi._
+import saxi.protocol.Protocol
 
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
@@ -44,18 +46,43 @@ object Main {
           ebb.moveAtConstantRate(duration, x, y)
         }: Runnable)
         Nil
+      case Protocol.SetPenHeight(height, rate) =>
+        ebbQ.submit({ () =>
+          ebb.setPenHeight(height, rate)
+        }: Runnable)
+        Nil
+      case Protocol.DisableMotors() =>
+        ebbQ.submit({ () =>
+          ebb.disableMotors()
+        }: Runnable)
+        Nil
+      case _ =>
+        Nil
     }
 
 
   def websocketChatFlow(): Flow[Message, Message, Any] =
     Flow[Message]
+      .flatMapConcat {
+        case BinaryMessage.Streamed(bs) =>
+          (bs via Flow[ByteString].fold(ByteString.empty)(_ concat _)) map BinaryMessage.Strict
+        case TextMessage.Streamed(ts) => (ts via Flow[String].fold("")(_ + _)) map TextMessage.Strict
+        case other: Message =>
+          Source.single(other)
+      }
       .collect {
-        case TextMessage.Strict(msg) => Protocol.Ping("foo") // todo
+        case BinaryMessage.Strict(msg) =>
+          import boopickle.Default._
+          val res = Unpickle[Protocol.ClientMessage].fromBytes(msg.asByteBuffer)
+          res
       }
       .via(flow)
       .map {
-        msg: Protocol.ServerMessage => TextMessage.Strict(msg.toString) // todo
+        msg: Protocol.ServerMessage =>
+          import boopickle.Default._
+          BinaryMessage.Strict(ByteString(Pickle.intoBytes(msg)))
       }
+      .merge(Source.single(TextMessage.Strict("oh hello, friend!")))
       .via(reportErrorsFlow)
 
   def reportErrorsFlow[T]: Flow[T, T, Any] =
@@ -69,6 +96,9 @@ object Main {
   def doPlot(plan: Planning.Plan): Future[Unit] = {
     Future {
       ebb.enableMotors(microsteppingMode = 2)
+      plan.motions.collectFirst { case m: Planning.PenMotion => m }.foreach { m =>
+        ebb.setPenHeight(m.initialPos, 1000, delay=1000)
+      }
 
       cancel.set(false)
       val motions = plan.motions.iterator
@@ -86,9 +116,15 @@ object Main {
 
   val route: Route = {
     pathSingleSlash {
-      // getFromResource("web/index.html")
+      getFromResource("web/index.html")
+      /*
       get {
         complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+      }
+      */
+    } ~ pathPrefix("js") {
+      get {
+        getFromResourceDirectory("js")
       }
     } ~ path("chat") {
       handleWebSocketMessages(websocketChatFlow())
@@ -108,7 +144,7 @@ object Main {
         }
       }
     } ~ path("plot") {
-      withoutSizeLimit {
+      withoutSizeLimit { // TODO: what if anything do i need to do to push this over WS instead of HTTP?
         post {
           entity(as[Array[Byte]]) { bytes =>
             complete {

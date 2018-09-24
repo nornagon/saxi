@@ -1,11 +1,15 @@
 package saxi
 
+import scala.scalajs.js.annotation._
+
+@JSExportTopLevel("AccelerationProfile")
 case class AccelerationProfile(
   acceleration: Double,
   maximumVelocity: Double,
   corneringFactor: Double,
 )
 
+@JSExportTopLevel("ToolingProfile")
 case class ToolingProfile(
   penDownProfile: AccelerationProfile,
   penUpProfile: AccelerationProfile,
@@ -15,7 +19,9 @@ case class ToolingProfile(
   penDropDuration: Double,
 )
 
+@JSExportTopLevel("TPPreset")
 object ToolingProfile {
+  @JSExport
   val AxidrawFast = ToolingProfile(
     penDownProfile = AccelerationProfile(
       acceleration = 200 * Device.Axidraw.stepsPerMm,

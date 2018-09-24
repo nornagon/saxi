@@ -1,6 +1,7 @@
 package saxi
 
 import scala.collection.{Searching, mutable}
+import scala.scalajs.js.annotation.JSExportAll
 
 /**
   * Cribbed from https://github.com/fogleman/axi/blob/master/axi/planner.py
@@ -50,6 +51,7 @@ object Planning {
     def p2: Vec2 = blocks.last.p2
   }
 
+  @JSExportAll
   case class Plan(motions: Seq[Motion]) {
     def duration: Double = motions.map(_.duration).sum
   }

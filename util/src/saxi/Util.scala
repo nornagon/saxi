@@ -1,5 +1,9 @@
 package saxi
 
+import scala.scalajs.js.annotation.{JSExportAll, JSExportTopLevel}
+
+@JSExportAll
+@JSExportTopLevel("Util")
 object Util {
   /** Split d into its fractional and integral parts */
   def modf(d: Double): (Double, Long) = {
