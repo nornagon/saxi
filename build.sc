@@ -121,7 +121,7 @@ object server extends CommonModule {
     val outPath = T.ctx().dest / 'js
     mkdir(outPath)
     cp(
-      driverJs.fastOpt().path,
+      driverJs.fullOpt().path,
       outPath / "driver.js"
     )
     outPath

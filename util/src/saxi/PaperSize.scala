@@ -19,6 +19,7 @@ object PaperSize {
   val A4: PaperSize = PaperSize(Vec2(210, 297))
   val A5: PaperSize = PaperSize(Vec2(148, 210))
   val A6: PaperSize = PaperSize(Vec2(105, 148))
+  val SixByEight: PaperSize = PaperSize(Vec2(6, 8) * 25.4)
 
   val byName = ListMap(
     "USLetter" -> USLetter,
@@ -27,6 +28,7 @@ object PaperSize {
     "A4" -> A4,
     "A5" -> A5,
     "A6" -> A6,
+    "6x8" -> SixByEight,
   )
 
   def supported: String = {

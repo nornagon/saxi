@@ -148,7 +148,7 @@ svg {
         return parts
       }
 
-      function readSvg(svgString) {
+      function svgToPaths(svgString) {
         const div = document.createElement('div')
         div.style.position = 'absolute'
         div.style.left = '99999px'
@@ -158,13 +158,29 @@ svg {
           const svg = div.querySelector('svg')
           const svgPoint = svg.createSVGPoint()
           const paths = []
-          for (const path of svg.querySelectorAll('path')) {
+          for (const path of svg.querySelectorAll('path,ellipse')) {
+            const type = path.nodeName.toLowerCase()
             const ctm = path.getCTM()
             const xf = ([x,y]) => { svgPoint.x = x; svgPoint.y = y;
               const xfd = svgPoint.matrixTransform(ctm); return [xfd.x, xfd.y] }
+            let pathData;
+            if (type === 'path') {
+              pathData = path.getPathData({normalize: true})
+            } else if (type === 'ellipse') {
+              const cx = path.cx.baseVal.value
+              const cy = path.cy.baseVal.value
+              const rx = path.rx.baseVal.value
+              const ry = path.ry.baseVal.value
+              pathData = [
+                {type: 'M', values: [cx-rx, cy]},
+                {type: 'A', values: [rx, ry, 0, 1, 0, cx+rx, cy]},
+                {type: 'A', values: [rx, ry, 0, 1, 0, cx-rx, cy]},
+                {type: 'Z'},
+              ]
+            }
             let cur = null
             let closePoint = null
-            for (const cmd of path.getPathData({normalize: true})) {
+            for (const cmd of pathData) {
               if (cmd.type === 'M') {
                 cur = xf(cmd.values)
                 closePoint = cur
@@ -183,6 +199,65 @@ svg {
                   paths[paths.length-1].push([part[6], part[7]])
                 }
                 cur = [tx3, ty3]
+              } else if (cmd.type === 'A') {
+                const [rx, ry, xAxisRotation, largeArc, sweep, x, y] = cmd.values
+                const phi = xAxisRotation
+                const fS = sweep
+                const fA = largeArc
+                const {cos, sin, sqrt, sign, acos, abs, ceil} = Math
+
+                // https://www.w3.org/TR/SVG/implnote.html#ArcImplementationNotes
+                const mpx = (cur[0] - x)/2,
+                      mpy = (cur[1] - y)/2
+                const x1_ = cos(phi) * mpx + sin(phi) * mpy,
+                      y1_ = -sin(phi) * mpx + cos(phi) * mpy
+                const rx2 = rx*rx,
+                      ry2 = ry*ry
+                const x1_2 = x1_*x1_,
+                      y1_2 = y1_*y1_
+                const k = (fA === fS ? -1 : 1) * sqrt(
+                  (rx2*ry2 - rx2*y1_2 - ry2*x1_2) /
+                  (rx2*y1_2 + ry2*x1_2)
+                )
+                const cx_ = k * rx * y1_ / ry,
+                      cy_ = k * -ry * x1_ / rx
+                const cx = cos(phi) * cx_ - sin(phi) * cy_ + (cur[0] + x)/2,
+                      cy = sin(phi) * cx_ + cos(phi) * cy_ + (cur[1] + y)/2
+                const ang = (ux, uy, vx, vy) =>
+                  (ux*vy - uy*vx < 0 ? -1 : 1) *
+                    acos((ux*vx+uy*vy) / sqrt(ux*ux+uy*uy)*sqrt(vx*vx+vy*vy))
+                const t1 = ang(1, 0, (x1_-cx_)/rx, (y1_-cy_)/ry)
+                const dt_ = ang((x1_-cx_)/rx, (y1_-cy_)/ry, (-x1_-cx_)/rx,
+                  (-y1_-cy_)/ry) % (Math.PI*2)
+                const dt =
+                  fS === 0 && dt_ > 0 ? dt_ - Math.PI*2 :
+                  fS === 1 && dt_ < 0 ? dt_ + Math.PI*2 :
+                  dt_
+
+                // now:
+                // - (cx, cy) is the center of the ellipse
+                // - (rx, ry) is the radius
+                // - phi is the angle around the x-axis of the current
+                //   coordinate system to the x-axis of the ellipse
+                // - t1 is the start angle of the elliptical arc prior to the stretch and rotate operations.
+                // - t1+dt is the end angle of the elliptical arc prior to the stretch and rotate operations.
+
+                // parameterization:
+                // ( x )  =  ( cos phi   -sin phi ) . ( rx cos t )  +  ( cx )
+                // ( y )  =  ( sin phi    cos phi )   ( ry sin t )     ( cy )
+
+                // https://i.imgur.com/JORhNjU.jpg
+                // maximum error based on maximum deviation from true arc
+                const e0 = 0.5
+                const n = ceil(abs(dt) / acos(1-e0/rx))
+
+                for (let i = 1; i <= n; i++) {
+                  const theta = t1 + dt * i/n
+                  const tx = cos(phi) * rx * cos(theta) - sin(phi) * ry * sin(theta) + cx
+                  const ty = sin(phi) * rx * cos(theta) + cos(phi) * ry * sin(theta) + cy
+                  paths[paths.length-1].push([tx,ty])
+                }
+                cur = [x, y]
               } else if (cmd.type === 'Z') {
                 if (closePoint && (cur[0] !== closePoint[0] || cur[1] !== closePoint[1])) {
                   paths[paths.length-1].push(closePoint)
@@ -192,21 +267,38 @@ svg {
               }
             }
           }
-          const penUpPct = Number(penUpHeight.value)
-          const penUpPos = Device.Axidraw.penPctToPos(penUpPct)
-          const penDownPct = Number(penDownHeight.value)
-          const penDownPos = Device.Axidraw.penPctToPos(penDownPct)
-          const paperSize = PaperSize(Vec2(Number(paperSizeWidth.value), Number(paperSizeHeight.value)))
-          const scaledToPaper = Planning.scaleToPaper(paths, paperSize, Number(marginMm.value))
-          const optimized = Planning.optimize(scaledToPaper)
-          const {stepsPerMm} = Device.Axidraw
-          const inSteps = optimized.map(ps => ps.map(p => [p[0] * stepsPerMm, p[1] * stepsPerMm]))
-          const plan = Planning.plan(inSteps, penUpPos, penDownPos)
-          setPlan(plan, paperSize)
-          window.plan = plan
+          return paths
         } finally {
           div.remove()
         }
+      }
+
+      function timed(name) {
+        return f => {
+          const t0 = performance.now()
+          const v = f()
+          const t1 = performance.now()
+          console.info(`${name} took ${(t1 - t0)} ms`)
+          return v
+        }
+      }
+
+      function readSvg(svgString) {
+        const paperSize = PaperSize(Vec2(Number(paperSizeWidth.value), Number(paperSizeHeight.value)))
+
+        const paths = timed("svgToPaths")(() => svgToPaths(svgString))
+        const scaledToPaper = timed("scaledToPaper")(() => Planning.scaleToPaper(paths, paperSize, Number(marginMm.value)))
+        const optimized = timed("optimize")(() => Planning.optimize(scaledToPaper))
+
+        const penUpPct = Number(penUpHeight.value)
+        const penUpPos = Device.Axidraw.penPctToPos(penUpPct)
+        const penDownPct = Number(penDownHeight.value)
+        const penDownPos = Device.Axidraw.penPctToPos(penDownPct)
+        const {stepsPerMm} = Device.Axidraw
+        const inSteps = optimized.map(ps => ps.map(p => [p[0] * stepsPerMm, p[1] * stepsPerMm]))
+        const plan = timed("plan")(() => Planning.plan(inSteps, penUpPos, penDownPos))
+        setPlan(plan, paperSize)
+        window.plan = plan
       }
       document.onpaste = e => {
         e.clipboardData.items[0].getAsString(s => readSvg(s))
