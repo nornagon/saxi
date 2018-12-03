@@ -1,4 +1,7 @@
-import mill._, scalalib._, scalajslib._
+import ammonite.ops
+import mill._
+import scalalib._
+import scalajslib._
 import ammonite.ops._
 
 trait CommonModule extends ScalaModule {
@@ -117,6 +120,7 @@ object server extends CommonModule {
     ivy"com.typesafe.akka::akka-stream:2.5.8",
     ivy"io.suzaku::boopickle:1.2.6",
   )
+  def extraSources = T.sources { ui.bundle() }
   def jsResources = T {
     val outPath = T.ctx().dest / 'js
     mkdir(outPath)
@@ -124,14 +128,32 @@ object server extends CommonModule {
       driverJs.fullOpt().path,
       outPath / "driver.js"
     )
+    extraSources().foreach(s => cp(s.path, outPath / s.path.last))
     outPath
   }
   override def resources = T.sources(
     millSourcePath / 'resources,
     jsResources() / RelPath.up
-    //driverJs.fastOpt().path / RelPath.up
   )
   override def mainClass = Some("saxi.server.Main")
+}
+
+trait WebpackModule extends mill.Module {
+  def javascriptSourceRoot = T.sources { millSourcePath / "src" }
+  def allJSSources = T { javascriptSourceRoot().flatMap(p => os.walk(p.path)).map(PathRef(_)) }
+  def bundle = T {
+    println(allJSSources())
+    ops.%%("npm", "install")(millSourcePath)
+    val webpackData = ops.%%("npx", "webpack", "--json")(millSourcePath)
+    val wp = ujson.read(webpackData.out.string)
+    val outputDir = Path(wp("outputPath").str)
+    val assets = wp("assets").arr.map(outputDir / _.obj("name").str)
+    assets.map(PathRef(_))
+  }
+}
+
+object ui extends WebpackModule {
+
 }
 
 object cli extends CommonModule {

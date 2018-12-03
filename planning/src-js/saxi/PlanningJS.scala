@@ -9,6 +9,7 @@ import js.JSConverters._
 @JSExportAll
 object PlanningJS {
   def optimize(jsPaths: js.Array[js.Array[js.Array[Double]]]): js.Array[js.Array[js.Array[Double]]] = {
+    if (jsPaths.length == 0) return jsPaths
     val paths = jsPaths.map(points => points.map(p => Vec2(p(0), p(1))).toSeq).toSeq
     Optimization.optimize(paths).map { ps => ps.map { p => js.Array(p.x, p.y) }.toJSArray }.toJSArray
   }
@@ -18,6 +19,7 @@ object PlanningJS {
     penUpPos: Int = ToolingProfile.AxidrawFast.penUpPos,
     penDownPos: Int = ToolingProfile.AxidrawFast.penDownPos
   ): Planning.Plan = {
+    if (jsPaths.length == 0) return Planning.Plan(Seq.empty)
     val paths = jsPaths.map(points => points.map(p => Vec2(p(0), p(1))).toSeq).toSeq
     Planning.plan(paths, ToolingProfile.AxidrawFast.copy(penUpPos = penUpPos, penDownPos = penDownPos))
   }

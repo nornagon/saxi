@@ -161,6 +161,7 @@ object Main {
       post {
         complete {
           cancel.set(true)
+          println(s"Cancelling after next penup...")
           HttpEntity(ContentTypes.`application/json`, "{}")
         }
       }
