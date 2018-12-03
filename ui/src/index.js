@@ -1,10 +1,11 @@
-import { useState, useRef, useReducer, useEffect, useMemo } from 'react'
-import React from 'react'
+import React, { useState, useRef, useReducer, useEffect, useMemo, useContext, useLayoutEffect, useCallback } from 'react'
 import { svgToPaths } from './svg-to-paths'
+import { useThunkReducer } from './thunk-reducer'
+import ReactDOM from 'react-dom'
 
-const ReactDOM = require('react-dom') // todo: how does import even
+const scale = 3 // px/mm
 
-const initialConfig = {
+const initialState = {
   penUpHeight: 50,
   penDownHeight: 60,
   paperSize: Planning.paperSizes.ArchA.landscape,
@@ -16,7 +17,7 @@ const initialConfig = {
   selectedLayers: new Set,
 }
 
-const scale = 3 // px/mm
+const DispatchContext = React.createContext(null)
 
 function reducer(state, action) {
   switch (action.type) {
@@ -37,7 +38,6 @@ function reducer(state, action) {
       const {paths, layers, selectedLayers} = action
       return {...state, plan: null, paths, layers, selectedLayers}
     case 'SET_PLAN':
-      console.log(action)
       return {...state, plan: action.plan}
     case 'SET_LAYERS':
       return {...state, selectedLayers: action.selectedLayers}
@@ -47,13 +47,30 @@ function reducer(state, action) {
   }
 }
 
-function useConfig() {
-  const [config, setConfig] = useState(initialConfig)
-  return [config, setConfig]
+const doReplan = () => async (dispatch, getState) => {
+  const state = getState()
+  const plan = await replan(
+    state.paths,
+    state.paperSize,
+    state.marginMm,
+    state.selectedLayers,
+    state.penUpHeight,
+    state.penDownHeight
+  )
+  dispatch({type: 'SET_PLAN', plan})
 }
 
-function PenHeight({state, dispatch, driver}) {
+const setPaths = paths => dispatch => {
+  const strokes = new Set()
+  for (const path of paths) { strokes.add(path.stroke) }
+  const layers = Array.from(strokes).sort()
+  dispatch({type: 'SET_PATHS', paths, layers, selectedLayers: new Set(layers)})
+  dispatch(doReplan())
+}
+
+function PenHeight({state, driver}) {
   const {penUpHeight, penDownHeight} = state
+  const dispatch = useContext(DispatchContext)
   const setPenUpHeight = (x) => dispatch({type: 'SET_PEN_UP_HEIGHT', value: x})
   const setPenDownHeight = (x) => dispatch({type: 'SET_PEN_DOWN_HEIGHT', value: x})
   const penUp = () => {
@@ -86,7 +103,8 @@ function PenHeight({state, dispatch, driver}) {
   </>
 }
 
-function PaperSizeConfig({state, dispatch}) {
+function PaperConfig({state}) {
+  const dispatch = useContext(DispatchContext)
   function setPaperSize(e) {
     const name = e.target.value
     if (name !== 'Custom') {
@@ -130,16 +148,13 @@ function PaperSizeConfig({state, dispatch}) {
         onChange={e => dispatch({type: 'SET_LANDSCAPE', value: e.target.checked})}
       /> landscape
     </label>
-  </div>
-}
-
-function MarginConfig({state, dispatch}) {
-  return <div>
-    margin: <input
-      type="number"
-      value={state.marginMm}
-      onChange={e => dispatch({type: 'SET_MARGIN', value: Number(e.target.value)})}
-    /> mm
+    <div>
+      margin: <input
+        type="number"
+        value={state.marginMm}
+        onChange={e => dispatch({type: 'SET_MARGIN', value: Number(e.target.value)})}
+      /> mm
+    </div>
   </div>
 }
 
@@ -178,14 +193,13 @@ function PlanPreview({state}) {
   </div>
 }
 
-function LayerSelector({state, dispatch}) {
+function LayerSelector({state}) {
+  const dispatch = useContext(DispatchContext)
   if (state.layers.length <= 1) return null
   const layersChanged = e => {
     const selectedLayers = new Set([...e.target.selectedOptions].map(o => o.value))
     dispatch({type: 'SET_LAYERS', selectedLayers})
-    replan(state.paths, state.paperSize, state.marginMm, selectedLayers, state.penUpHeight, state.penDownHeight).then(plan => {
-      dispatch({type: 'SET_PLAN', plan})
-    })
+    dispatch(doReplan())
   }
   return <div>
     <select multiple={true} value={[...state.selectedLayers]} onChange={layersChanged}>
@@ -216,16 +230,7 @@ function PlotButtons({state, driver}) {
 }
 
 function Root({driver}) {
-  const [state, dispatch] = useReducer(reducer, initialConfig)
-  const setPaths = paths => {
-    const strokes = new Set()
-    for (const path of paths) { strokes.add(path.stroke) }
-    const layers = Array.from(strokes).sort()
-    dispatch({type: 'SET_PATHS', paths, layers, selectedLayers: new Set(layers)})
-    replan(paths, state.paperSize, state.marginMm, new Set(layers), state.penUpHeight, state.penDownHeight).then(plan => {
-      dispatch({type: 'SET_PLAN', plan})
-    })
-  }
+  const [state, dispatch] = useThunkReducer(reducer, initialState)
   useEffect(() => {
     const ondrop = e => {
       e.preventDefault()
@@ -233,14 +238,14 @@ function Root({driver}) {
       const file = item.getAsFile()
       const reader = new FileReader()
       reader.onload = e => {
-        setPaths(readSvg(reader.result))
+        dispatch(setPaths(readSvg(reader.result)))
       }
       reader.readAsText(file)
     }
     const ondragover = e => { e.preventDefault() }
     const onpaste = e => {
       e.clipboardData.items[0].getAsString(s => {
-        setPaths(readSvg(s))
+        dispatch(setPaths(readSvg(s)))
       })
     }
     document.body.addEventListener('drop', ondrop)
@@ -251,17 +256,18 @@ function Root({driver}) {
       document.body.removeEventListener('dragover', ondragover)
       document.removeEventListener('paste', onpaste)
     }
-  })
-  return <div>
-    <PenHeight state={state} dispatch={dispatch} driver={driver} />
-    <PaperSizeConfig state={state} dispatch={dispatch} />
-    <MarginConfig state={state} dispatch={dispatch} />
-    <MotorControl driver={driver} />
-    <PlanStatistics plan={state.plan} />
-    <PlanPreview state={state} />
-    <LayerSelector state={state} dispatch={dispatch} />
-    <PlotButtons state={state} driver={driver} />
-  </div>
+  }, [])
+  return <DispatchContext.Provider value={dispatch}>
+    <div>
+      <PenHeight state={state} driver={driver} />
+      <PaperConfig state={state} />
+      <MotorControl driver={driver} />
+      <PlanStatistics plan={state.plan} />
+      <PlanPreview state={state} />
+      <LayerSelector state={state} />
+      <PlotButtons state={state} driver={driver} />
+    </div>
+  </DispatchContext.Provider>
 }
 
 ReactDOM.render(<Root driver={Driver.connect()}/>, document.getElementById('app'))

@@ -104,8 +104,9 @@ export function svgToPaths(svgString) {
           cur = xf(cmd.values)
           closePoint = cur
           paths.push([cur])
-          paths[paths.length - 1].stroke = getComputedStyle(path).stroke
-          //paths[paths.length - 1].stroke = path.getAttribute('stroke')
+          // getComputedStyle doesn't seem to work until the JS loop that inserted it is done...
+          //paths[paths.length - 1].stroke = getComputedStyle(path).stroke
+          paths[paths.length - 1].stroke = path.getAttribute('stroke')
         } else if (cmd.type === 'L') {
           cur = xf(cmd.values)
           paths[paths.length-1].push(cur)
