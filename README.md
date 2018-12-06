@@ -48,6 +48,31 @@ Disable the stepper motors.
 - Manual control from the command line, e.g. XY jogging, pen height
 - Expose more tooling profile parameters as configuration options
 
+### Developing
+
+If you want to build & run saxi from source on your local machine, you'll need [mill](http://www.lihaoyi.com/mill/):
+
+```sh
+$ brew install mill # on macOS
+# for other OSes, see http://www.lihaoyi.com/mill/
+```
+
+Then just clone the repository and run `mill server.run`:
+
+```sh
+$ git clone https://github.com/nornagon/saxi
+$ cd saxi
+$ mill -i server.run
+# ...
+Server is listening on 0.0.0.0:9080
+```
+
+To watch changes to source files and re-build automatically:
+
+```sh
+$ mill -w server.runBackground
+```
+
 ### Credits
 saxi's motion planning algorithm is heavily inspired by Michael Fogleman's
 [axi](https://github.com/fogleman/axi) project.
