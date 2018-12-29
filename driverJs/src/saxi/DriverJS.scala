@@ -23,6 +23,7 @@ object DriverJS {
   @JSExport
   def connect(): Driver = {
     val ws = new WebSocket(s"ws://${dom.document.location.host}/chat")
+    val d = new Driver(ws)
     ws.binaryType = "arraybuffer"
     ws.addEventListener("message", (e: MessageEvent) => {
       e.data match {
@@ -33,6 +34,12 @@ object DriverJS {
           val msg = Unpickle[ServerMessage].fromBytes(bytes)
           msg match {
             case Protocol.Pong(data) =>
+            case Protocol.Progress(i) =>
+              if (d.onprogress != null) d.onprogress(i)
+            case Protocol.Cancelled() =>
+              if (d.oncancelled != null) d.oncancelled()
+            case Protocol.Finished() =>
+              if (d.oncancelled != null) d.oncancelled()
             case other =>
               println(s"Unknown message from server: $other")
           }
@@ -41,7 +48,6 @@ object DriverJS {
     ws.addEventListener("error", (e: ErrorEvent) => {
       // TODO: something
     })
-    val d = new Driver(ws)
     js.timers.setInterval(30000) { d.ping() }
     d
   }
@@ -50,6 +56,9 @@ object DriverJS {
 
 @JSExportAll
 class Driver(connection: WebSocket) {
+  var onprogress: js.Function1[Int, Unit] = _
+  var oncancelled: js.Function0[Unit] = _
+  var onfinished: js.Function0[Unit] = _
   def setPenHeight(height: Int, rate: Int): Unit = {
     send(Protocol.SetPenHeight(height, rate))
   }

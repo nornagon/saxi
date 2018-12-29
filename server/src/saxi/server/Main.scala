@@ -11,8 +11,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.ws.{BinaryMessage, Message, TextMessage}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{BroadcastHub, Flow, Keep, Source}
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.util.ByteString
 import saxi._
 import saxi.protocol.Protocol
@@ -60,6 +60,13 @@ object Main {
         Nil
     }
 
+  private val bc = Source.queue[Protocol.ServerMessage](1, OverflowStrategy.dropHead)
+
+  private val (broadcastQueue, broadcasted) =
+    bc.toMat(BroadcastHub.sink(256))(Keep.both).run()
+
+  def broadcast(msg: Protocol.ServerMessage): Unit =
+    broadcastQueue.offer(msg)
 
   def websocketChatFlow(): Flow[Message, Message, Any] =
     Flow[Message]
@@ -77,6 +84,7 @@ object Main {
           res
       }
       .via(flow)
+      .merge(broadcasted)
       .map {
         msg: Protocol.ServerMessage =>
           import boopickle.Default._
@@ -95,22 +103,48 @@ object Main {
 
   def doPlot(plan: Planning.Plan): Future[Unit] = {
     Future {
-      ebb.enableMotors(microsteppingMode = 2)
-      plan.motions.collectFirst { case m: Planning.PenMotion => m }.foreach { m =>
-        ebb.setPenHeight(m.initialPos, 1000, delay=1000)
-      }
+      if (ebb != null) {
+        ebb.enableMotors(microsteppingMode = 2)
+        plan.motions.collectFirst { case m: Planning.PenMotion => m }.foreach { m =>
+          ebb.setPenHeight(m.initialPos, 1000, delay = 1000)
+        }
 
-      cancel.set(false)
-      val motions = plan.motions.iterator
-      while (!cancel.get() && motions.hasNext) {
-        val motion = motions.next()
-        ebb.executeMotion(motion)
+        cancel.set(false)
+        val motions = plan.motions.iterator
+        var i = 0
+        var cancelled = false
+        while (!{cancelled = cancel.get(); cancelled} && motions.hasNext) {
+          val motion = motions.next()
+          broadcast(Protocol.Progress(i))
+          ebb.executeMotion(motion)
+          i += 1
+        }
+        if (cancelled) {
+          ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000)
+          broadcast(Protocol.Cancelled())
+        } else {
+          broadcast(Protocol.Finished())
+        }
+        ebb.waitUntilMotorsIdle()
+        ebb.disableMotors()
+      } else {
+        // simulate
+        val motions = plan.motions.iterator
+        var i = 0
+        cancel.set(false)
+        var cancelled = false
+        while (!{ cancelled = cancel.get(); cancelled } && motions.hasNext) {
+          val motion = motions.next()
+          broadcast(Protocol.Progress(i))
+          Thread.sleep((motion.duration * 1000).round)
+          i += 1
+        }
+        if (cancelled) {
+          broadcast(Protocol.Cancelled())
+        } else {
+          broadcast(Protocol.Finished())
+        }
       }
-      if (cancel.get()) {
-        ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000)
-      }
-      ebb.waitUntilMotorsIdle()
-      ebb.disableMotors()
     }(ebbEC)
   }
 

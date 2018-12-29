@@ -15,6 +15,7 @@ const initialState = {
   paths: null,
   layers: [],
   selectedLayers: new Set,
+  progress: null,
 }
 
 const DispatchContext = React.createContext(null)
@@ -41,6 +42,8 @@ function reducer(state, action) {
       return {...state, plan: action.plan}
     case 'SET_LAYERS':
       return {...state, selectedLayers: action.selectedLayers}
+    case 'SET_PROGRESS':
+      return {...state, progress: action.motionIdx}
     default:
       console.warn(`Unrecognized action type '${action.type}'`)
       return state
@@ -79,7 +82,7 @@ function PenHeight({state, driver}) {
   }
   const penDown = () => {
     const height = Device.Axidraw.penPctToPos(penDownHeight)
-    d.setPenHeight(height, 1000)
+    driver.setPenHeight(height, 1000)
   }
   return <>
     <div>
@@ -108,9 +111,7 @@ function PaperConfig({state}) {
   function setPaperSize(e) {
     const name = e.target.value
     if (name !== 'Custom') {
-      let ps = Planning.paperSizes[name]
-      if (state.landscape) ps = ps.landscape
-      else ps = ps.portrait
+      const ps = Planning.paperSizes[name][state.landscape ? 'landscape' : 'portrait']
       dispatch({type: 'SET_PAPER_SIZE', size: ps})
     }
   }
@@ -184,12 +185,60 @@ function PlanPreview({state}) {
       </g>
     }
   }, [state.plan])
-  return <div>
+  const [microprogress, setMicroprogress] = useState(0)
+  useLayoutEffect(() => {
+    let rafHandle = null
+    let cancelled = false
+    if (state.progress != null) {
+      const startingTime = Date.now()
+      function updateProgress() {
+        if (cancelled) return
+        setMicroprogress(Date.now() - startingTime)
+        rafHandle = requestAnimationFrame(updateProgress)
+      }
+      //rafHandle = requestAnimationFrame(updateProgress)
+      updateProgress()
+    }
+    return () => {
+      cancelled = true
+      if (rafHandle != null) {
+        cancelAnimationFrame(rafHandle)
+      }
+      setMicroprogress(0)
+    }
+  }, [state.progress])
+  let progressIndicator = null
+  if (state.progress != null && state.plan != null) {
+    const motion = state.plan.motion(state.progress)
+    const pos = motion.$classData.name === 'saxi.Planning$XYMotion'
+      ? motion.instant(Math.min(microprogress / 1000, motion.duration)).p
+      : state.plan.motion(state.progress-1).p2
+    progressIndicator = 
+      <svg
+        width={ps.size.x * scale * 2}
+        height={ps.size.y * scale * 2}
+        viewBox={`${-ps.size.x} ${-ps.size.y} ${ps.size.x*2} ${ps.size.y*2}`}
+        style={{transform: `translateZ(0.001px) translate(${-ps.size.x*scale}px, ${-ps.size.y*scale}px) translate(${pos.x/Device.Axidraw.stepsPerMm * scale}px,${pos.y/Device.Axidraw.stepsPerMm * scale}px)`}}
+      >
+        <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
+          <path
+            d={`M-${ps.size.x * scale * Device.Axidraw.stepsPerMm} 0l${ps.size.x * 2 * scale * Device.Axidraw.stepsPerMm} 0M0 -${ps.size.y * scale * Device.Axidraw.stepsPerMm}l0 ${ps.size.y * 2 * scale * Device.Axidraw.stepsPerMm}`}
+            style={{stroke: 'rgba(255, 0, 0, 0.4)', strokeWidth: 0.5}}
+          />
+          <path
+            d={`M-10 0l20 0M0 -10l0 20`}
+            style={{stroke: 'rgba(255, 0, 0, 0.8)', strokeWidth: 2}}
+          />
+        </g>
+      </svg>
+  }
+  return <div className="preview">
     <svg
       width={ps.size.x * scale}
       height={ps.size.y * scale}
       viewBox={`0 0 ${ps.size.x} ${ps.size.y}`}
     >{memoizedPlanPreview}</svg>
+    {progressIndicator}
   </div>
 }
 
@@ -232,6 +281,12 @@ function PlotButtons({state, driver}) {
 function Root({driver}) {
   const [state, dispatch] = useThunkReducer(reducer, initialState)
   useEffect(() => {
+    driver.onprogress = motionIdx => {
+      dispatch({type: 'SET_PROGRESS', motionIdx})
+    }
+    driver.oncancelled = () => {
+      dispatch({type: 'SET_PROGRESS', motionIdx: null})
+    }
     const ondrop = e => {
       e.preventDefault()
       const item = e.dataTransfer.items[0]
@@ -256,7 +311,7 @@ function Root({driver}) {
       document.body.removeEventListener('dragover', ondragover)
       document.removeEventListener('paste', onpaste)
     }
-  }, [])
+  })
   return <DispatchContext.Provider value={dispatch}>
     <div>
       <PenHeight state={state} driver={driver} />
@@ -287,17 +342,27 @@ function readSvg(svgString) {
 }
 
 async function replan(paths, paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight) {
+  // Compute scaling using _all_ the paths, so it's the same no matter what
+  // layers are selected.
   const scaledToPaper = timed("scaledToPaper")(() => Planning.scaleToPaper(paths, paperSize, marginMm))
 
+  // Rescaling loses the stroke info, so refer back to the original paths to
+  // filter based on the stroke. Rescaling doesn't change the number or order
+  // of the paths.
   const scaledToPaperSelected = scaledToPaper.filter((path, i) =>
     selectedLayers.has(paths[i].stroke))
 
+  // Optimize based on just the selected layers.
   const optimized = timed("optimize")(() => Planning.optimize(scaledToPaperSelected))
 
-  const penUpPos = Device.Axidraw.penPctToPos(penUpHeight)
-  const penDownPos = Device.Axidraw.penPctToPos(penDownHeight)
+  // Convert the paths to units of "steps".
   const {stepsPerMm} = Device.Axidraw
   const inSteps = optimized.map(ps => ps.map(p => [p[0] * stepsPerMm, p[1] * stepsPerMm]))
+
+  // And finally, motion planning.
+  const penUpPos = Device.Axidraw.penPctToPos(penUpHeight)
+  const penDownPos = Device.Axidraw.penPctToPos(penDownHeight)
   const plan = timed("plan")(() => Planning.plan(inSteps, penUpPos, penDownPos))
+
   return plan
 }

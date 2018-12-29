@@ -9,6 +9,7 @@ import scala.scalajs.js.annotation.JSExportAll
 object Planning {
   val epsilon: Double = 1e-9
 
+  @JSExportAll
   case class Instant(t: Double, p: Vec2, s: Double, v: Double, a: Double)
 
   case class Block(accel: Double, duration: Double, vInitial: Double, p1: Vec2, p2: Vec2) {
@@ -26,12 +27,15 @@ object Planning {
     }
   }
 
+  @JSExportAll
   sealed trait Motion {
     def duration: Double
   }
 
+  @JSExportAll
   case class PenMotion(initialPos: Int, finalPos: Int, duration: Double) extends Motion
 
+  @JSExportAll
   case class XYMotion(blocks: Seq[Block]) extends Motion {
     private val ts: Seq[Double] = blocks.map(_.duration).scan(0d)(_ + _).init
     private val ss: Seq[Double] = blocks.map(_.distance).scan(0d)(_ + _).init
@@ -54,6 +58,7 @@ object Planning {
   @JSExportAll
   case class Plan(motions: Seq[Motion]) {
     def duration: Double = motions.map(_.duration).sum
+    def motion(i: Int) = motions(i)
   }
 
   case class Segment(
@@ -81,6 +86,31 @@ object Planning {
     math.min(v, vMax)
   }
 
+  /** Represents a triangular velocity profile for moving in a straight line.
+    *
+    * {{{
+    * +a ^____,        positive acceleration until maximum velocity is reached
+    *    |    |
+    *    |----|---> t
+    *    |    |___
+    * -a v             followed by negative acceleration until final velocity is reached
+    *
+    * +v ^    ,
+    *    |  ,' `.
+    * vi |,'     `  vf
+    *    |
+    *    +--------> t
+    * }}}
+    *
+    * @param s1 the length of the first (accelerating) part of the profile.
+    * @param s2 the length of the second (decelerating) part of the profile.
+    * @param t1 the duration of the first (accelerating) part of the profile.
+    * @param t2 the duration of the second (decelerating) part of the profile.
+    * @param vMax the maximum velocity achieved during the motion.
+    * @param p1 the initial position
+    * @param p2 the position at v=vMax
+    * @param p3 the final position
+    */
   case class Triangle(
     s1: Double, s2: Double,
     t1: Double, t2: Double,
@@ -90,23 +120,9 @@ object Planning {
   object Triangle {
     /** Compute a triangular velocity profile with piecewise constant acceleration.
       *
-      * {{{
-      * +a ^____,        positive acceleration until maximum velocity is reached
-      *    |    |
-      *    |----|---> t
-      *    |    |___     followed by negative acceleration until final velocity is reached
-      * -a v
+      * The maximum velocity is derived from the acceleration and the distance to be travelled.
       *
-      * +v ^    ,
-      *    |  ,' `.   vf
-      * vi |,'     `
-      *    |
-      *    +--------> t
-      * }}}
-      *
-      * The maximum velocity is derived from the maximum acceleration and the distance to be travelled.
-      *
-      * @param distance Distance to travel.
+      * @param distance Distance to travel (equal to |p3-p1|).
       * @param initialVel Starting velocity, unit length per unit time.
       * @param finalVel Final velocity, unit length per unit time.
       * @param accel Magnitude of acceleration, unit length per unit time per unit time.
@@ -115,21 +131,43 @@ object Planning {
       * @return
       */
     def compute(distance: Double, initialVel: Double, finalVel: Double, accel: Double, p1: Vec2, p3: Vec2): Triangle = {
-      require(!finalVel.isNaN, s"finalVel was NaN")
       val acceleratingDistance = (2 * accel * distance + finalVel * finalVel - initialVel * initialVel) / (4 * accel)
-      assert(!acceleratingDistance.isNaN, s"acceleratingDistance was NaN: $accel, $distance, $finalVel, $initialVel")
       val deceleratingDistance = distance - acceleratingDistance
       val vMax = math.sqrt(initialVel * initialVel + 2 * accel * acceleratingDistance)
-      assert(!vMax.isNaN, s"vMax was NaN: $initialVel, $accel, $acceleratingDistance")
       val t1 = (vMax - initialVel) / accel
       val t2 = (finalVel - vMax) / -accel
-      assert(!t1.isNaN, s"t1 was NaN: $vMax $initialVel $accel")
-      assert(!t2.isNaN, s"t2 was NaN: $vMax $finalVel $accel")
       val p2 = p1 + (p3 - p1).norm * acceleratingDistance
       Triangle(acceleratingDistance, deceleratingDistance, t1, t2, vMax, p1, p2, p3)
     }
   }
 
+  /** Represents a trapezoidal velocity profile for moving in a straight line.
+    *
+    * {{{
+    * +a ^____,           positive acceleration until maximum velocity is reached
+    *    |    |
+    *    |----+--+---> t  then zero acceleration while at maximum velocity
+    *    |       |___
+    * -a v                finally, negative acceleration until final velocity is reached
+    *
+    * +v ^    ,...     vmax
+    *    |  ,'    `.
+    * vi |,'        `  vf
+    *    |
+    *    +-----------> t
+    * }}}
+    *
+    * @param s1 the length of the first (accelerating) part of the profile.
+    * @param s2 the length of the second (constant velocity) part of the profile.
+    * @param s3 the length of the third (decelerating) part of the profile.
+    * @param t1 the duration of the first (accelerating) part of the profile.
+    * @param t2 the duration of the second (constant velocity) part of the profile.
+    * @param t3 the duration of the third (decelerating) part of the profile.
+    * @param p1 the initial position.
+    * @param p2 the position upon achieving v=vMax and beginning constant velocity interval.
+    * @param p3 the position upon beginning to decelerate after v=vMax.
+    * @param p4 the final position.
+    */
   case class Trapezoid(
     s1: Double, s2: Double, s3: Double,
     t1: Double, t2: Double, t3: Double,
@@ -150,31 +188,43 @@ object Planning {
     }
   }
 
-  /**
-    * Plan a path, using a constant acceleration profile.
-    * @param points Sequence of points to pass through
-    * @param profile Tooling profile to use
-    * @return A plan of action
-    */
-  def constantAccelerationPlan(points: Seq[Vec2], profile: AccelerationProfile): XYMotion = {
+  def dedupPoints(points: Seq[Vec2], epsilon: Double): Seq[Vec2] = {
     val dedupedPoints = mutable.ArrayBuffer.empty[Vec2]
     dedupedPoints += points.head
     for (p <- points.tail) {
       if ((p - dedupedPoints.last).length > epsilon)
         dedupedPoints += p
     }
+    dedupedPoints
+  }
+
+  /**
+    * Plan a path, using a constant acceleration profile.
+    * This function plans only a single x/y motion of the tool,
+    * i.e. between a single pen-down/pen-up pair.
+    *
+    * @param points Sequence of points to pass through
+    * @param profile Tooling profile to use
+    * @return A plan of action
+    */
+  def constantAccelerationPlan(points: Seq[Vec2], profile: AccelerationProfile): XYMotion = {
+    val dedupedPoints = dedupPoints(points, epsilon)
     if (dedupedPoints.size == 1) {
       return XYMotion(Seq(Block(0, 0, 0, dedupedPoints.head, dedupedPoints.head)))
     }
     var segments = dedupedPoints.sliding(2).map { case Seq(a, b) => Segment(a, b) }.toSeq
+
     val accel = profile.acceleration
     val vMax = profile.maximumVelocity
     val cornerFactor = profile.corneringFactor
-    for ((s1, s2) <- segments.zip(segments.tail)) {
-      s2.maxEntryVelocity = cornerVelocity(s1, s2, vMax, accel, cornerFactor)
-      assert(!s2.maxEntryVelocity.isNaN, s"cornerVel was NaN: $s1, $s2, $vMax, $accel, $cornerFactor")
+
+    // Calculate the maximum entry velocity for each segment based on the angle between it
+    // and the previous segment.
+    for ((seg1, seg2) <- segments.zip(segments.tail)) {
+      seg2.maxEntryVelocity = cornerVelocity(seg1, seg2, vMax, accel, cornerFactor)
     }
 
+    // This is to force the velocity to zero at the end of the path.
     segments = segments :+ Segment(dedupedPoints.last, dedupedPoints.last)
 
     var i: Int = 0
@@ -190,13 +240,14 @@ object Planning {
       val m = Triangle.compute(distance, vInitial, vExit, accel, p1, p2)
       if (m.s1 < -epsilon) {
         // We'd have to start decelerating _before we started on this segment_. backtrack.
-        // In order enter this segment slow enough to be leaving it at vExit, we need to compute a maximum entry
-        // velocity s.t. we can slow down in the distance we have.
+        // In order enter this segment slow enough to be leaving it at vExit, we need to
+        // compute a maximum entry velocity s.t. we can slow down in the distance we have.
         // TODO: verify this equation.
         segment.maxEntryVelocity = math.sqrt(vExit * vExit + 2 * accel * distance)
         i -= 1
-      } else if (m.s2 < 0) {
+      } else if (m.s2 <= 0) {
         // No deceleration.
+        // TODO: shouldn't we check vMax here and maybe do trapezoid? should the next case below come first?
         val vFinal = math.sqrt(vInitial * vInitial + 2 * accel * distance)
         val t = (vFinal - vInitial) / accel
         segment.blocks = Seq(
@@ -232,15 +283,22 @@ object Planning {
     paths: Seq[Seq[Vec2]],
     profile: ToolingProfile
   ): Plan = {
-    val drawnMotions = paths.map { constantAccelerationPlan(_, profile.penDownProfile) }
-    Plan((constantAccelerationPlan(Seq(Vec2(0, 0)), profile.penUpProfile) +: drawnMotions).sliding(2).flatMap {
-      case Seq(a, b) =>
-        Seq(
-          constantAccelerationPlan(Seq(a.p2, b.p1), profile.penUpProfile),
-          PenMotion(profile.penUpPos, profile.penDownPos, profile.penDropDuration),
-          b,
-          PenMotion(profile.penDownPos, profile.penUpPos, profile.penLiftDuration),
-        )
-    }.toSeq :+ constantAccelerationPlan(Seq(drawnMotions.last.p2, Vec2(0, 0)), profile.penUpProfile))
+    val motions = mutable.ArrayBuffer.empty[Motion]
+    var curPos = Vec2(0, 0)
+    // for each path: move to the initial point, put the pen down, draw the path,
+    // then pick the pen up.
+    for (p <- paths) {
+      val m = constantAccelerationPlan(p, profile.penDownProfile)
+      motions.append(
+        constantAccelerationPlan(Seq(curPos, m.p1), profile.penUpProfile),
+        PenMotion(profile.penUpPos, profile.penDownPos, profile.penDropDuration),
+        m,
+        PenMotion(profile.penDownPos, profile.penUpPos, profile.penLiftDuration)
+      )
+      curPos = m.p2
+    }
+    // finally, move back to (0, 0).
+    motions += constantAccelerationPlan(Seq(curPos, Vec2(0, 0)), profile.penUpProfile)
+    Plan(motions)
   }
 }

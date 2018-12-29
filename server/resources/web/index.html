@@ -9,8 +9,21 @@
         stroke: black;
         fill: transparent;
       }
-      svg {
+      .preview {
         box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.2);
+        position: relative;
+        display: inline-block;
+        overflow: hidden;
+      }
+      .preview > svg {
+        display: block;
+        contain: strict;
+      }
+      .preview > svg:not(:first-child) {
+        position: absolute;
+        transform: translateZ(0.001px);
+        top: 0;
+        left: 0;
       }
     </style>
   </head>

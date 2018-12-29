@@ -195,18 +195,20 @@ class OpenEBB(port: SerialPort) {
     * Note that the LM command is only available starting from EBB firmware version 2.5.3.
     */
   def executeXYMotionWithLM(plan: XYMotion): Unit = {
-    for (block <- plan.blocks) {
-      val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepMultiplier + error.x)
-      val (errY, stepsY) = modf((block.p2.y - block.p1.y) * stepMultiplier + error.y)
-      error = Vec2(errX, errY)
-      if (stepsX != 0 || stepsY != 0) {
-        moveWithAcceleration(
-          stepsX,
-          stepsY,
-          block.vInitial * stepMultiplier,
-          block.vFinal * stepMultiplier
-        )
-      }
+    plan.blocks.foreach(executeBlockWithLM)
+  }
+
+  def executeBlockWithLM(block: Planning.Block): Unit = {
+    val (errX, stepsX) = modf((block.p2.x - block.p1.x) * stepMultiplier + error.x)
+    val (errY, stepsY) = modf((block.p2.y - block.p1.y) * stepMultiplier + error.y)
+    error = Vec2(errX, errY)
+    if (stepsX != 0 || stepsY != 0) {
+      moveWithAcceleration(
+        stepsX,
+        stepsY,
+        block.vInitial * stepMultiplier,
+        block.vFinal * stepMultiplier
+      )
     }
   }
 
