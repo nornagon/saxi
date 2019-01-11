@@ -240,9 +240,21 @@ class OpenEBB(port: SerialPort) {
   }
 
   def executePenMotion(pm: PenMotion): Unit = {
-    val clocksMoved = (pm.finalPos - pm.initialPos).abs
-    val rate = clocksMoved * 24 / (pm.duration * 1000)
-    setPenHeight(pm.finalPos, rate.round.toInt, (pm.duration * 1000).round.toInt)
+    //val clocksMoved = (pm.finalPos - pm.initialPos).abs
+    // rate is in units of clocks per 24ms.
+    // so to fit the entire motion in |pm.duration|,
+    // dur = diff / rate
+    // [time] = [clocks] / ([clocks]/[time])
+    // [time] = [clocks] * [clocks]^-1 * [time]
+    // [time] = [time]
+    // ✔
+    // so rate = diff / dur
+    // dur is in [sec]
+    // but rate needs to be in [clocks] / [24ms]
+    // duration in units of 24ms is duration * [24ms] / [1s]
+    //println(s"$clocksMoved")
+    //val rate = clocksMoved * 24 / (pm.duration * 1000)
+    setPenHeight(pm.finalPos, 0, (pm.duration * 1000 + 0).round.toInt)
   }
 
   def executeMotion(m: Planning.Motion): Unit = {

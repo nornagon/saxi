@@ -35,8 +35,8 @@ object ToolingProfile {
     ),
     penUpPos = Device.Axidraw.penPctToPos(50),
     penDownPos = Device.Axidraw.penPctToPos(60),
-    penDropDuration = 0.067,
-    penLiftDuration = 0.067,
+    penDropDuration = 0.12,
+    penLiftDuration = 0.12,
   )
 }
 

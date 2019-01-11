@@ -26,7 +26,6 @@ object Device {
     def penPctToPos(pct: Double): Int = {
       val t = pct / 100.0
       (penServoMin * t + penServoMax * (1 - t)).round.toInt
-      (penServoMax - pct / 100.0 * (penServoMax - penServoMin)).round.toInt
     }
   }
 }

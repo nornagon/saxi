@@ -12,6 +12,7 @@ const initialState = {
   landscape: true,
   marginMm: 20,
   plan: null,
+  plannedOptions: null,
   paths: null,
   layers: [],
   selectedLayers: new Set,
@@ -39,7 +40,7 @@ function reducer(state, action) {
       const {paths, layers, selectedLayers} = action
       return {...state, plan: null, paths, layers, selectedLayers}
     case 'SET_PLAN':
-      return {...state, plan: action.plan}
+      return {...state, plan: action.plan, plannedOptions: action.planOptions}
     case 'SET_LAYERS':
       return {...state, selectedLayers: action.selectedLayers}
     case 'SET_PROGRESS':
@@ -52,15 +53,15 @@ function reducer(state, action) {
 
 const doReplan = () => async (dispatch, getState) => {
   const state = getState()
-  const plan = await replan(
-    state.paths,
-    state.paperSize,
-    state.marginMm,
-    state.selectedLayers,
-    state.penUpHeight,
-    state.penDownHeight
-  )
-  dispatch({type: 'SET_PLAN', plan})
+  const planOptions = {
+    paperSize: state.paperSize,
+    marginMm: state.marginMm,
+    selectedLayers: state.selectedLayers,
+    penUpHeight: state.penUpHeight,
+    penDownHeight: state.penDownHeight,
+  }
+  const plan = await replan(state.paths, planOptions)
+  dispatch({type: 'SET_PLAN', plan, planOptions})
 }
 
 const setPaths = paths => dispatch => {
@@ -248,7 +249,6 @@ function LayerSelector({state}) {
   const layersChanged = e => {
     const selectedLayers = new Set([...e.target.selectedOptions].map(o => o.value))
     dispatch({type: 'SET_LAYERS', selectedLayers})
-    dispatch(doReplan())
   }
   return <div>
     <select multiple={true} value={[...state.selectedLayers]} onChange={layersChanged}>
@@ -258,6 +258,7 @@ function LayerSelector({state}) {
 }
 
 function PlotButtons({state, driver}) {
+  const dispatch = useContext(DispatchContext)
   function cancel() {
     // TODO: move to Driver.scala
     fetch('/cancel', {
@@ -272,8 +273,27 @@ function PlotButtons({state, driver}) {
       body: pickled,
     }).then(res => res.json()).then(data => console.log(data))
   }
+
+  function setEq(a, b) {
+    if (a.size !== b.size) return false
+    for (let e of a)
+      if (!b.has(e))
+        return false
+    return true
+  }
+
+  const needsReplan = state.plan != null && (
+    state.plannedOptions.penUpHeight !== state.penUpHeight ||
+    state.plannedOptions.penDownHeight !== state.penDownHeight ||
+    state.plannedOptions.marginMm !== state.marginMm ||
+    state.plannedOptions.paperSize.size.x !== state.paperSize.size.x ||
+    state.plannedOptions.paperSize.size.y !== state.paperSize.size.y ||
+    !setEq(state.plannedOptions.selectedLayers, state.selectedLayers)
+  )
   return <div>
-    <button disabled={state.plan == null} onClick={() => plot(state.plan)}>plot</button>
+    {needsReplan
+        ? <button onClick={() => dispatch(doReplan())}>replan</button>
+        : <button disabled={state.plan == null} onClick={() => plot(state.plan)}>plot</button> }
     <button onClick={cancel}>cancel</button>
   </div>
 }
@@ -341,7 +361,7 @@ function readSvg(svgString) {
   return timed("svgToPaths")(() => svgToPaths(svgString))
 }
 
-async function replan(paths, paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight) {
+async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight}) {
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
   const scaledToPaper = timed("scaledToPaper")(() => Planning.scaleToPaper(paths, paperSize, marginMm))
