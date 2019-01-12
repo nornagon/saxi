@@ -189,6 +189,7 @@ object Planning {
   }
 
   def dedupPoints(points: Seq[Vec2], epsilon: Double): Seq[Vec2] = {
+    if (epsilon == 0) return points
     val dedupedPoints = mutable.ArrayBuffer.empty[Vec2]
     dedupedPoints += points.head
     for (p <- points.tail) {

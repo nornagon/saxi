@@ -8,6 +8,10 @@ import js.JSConverters._
 @JSExportTopLevel("Planning")
 @JSExportAll
 object PlanningJS {
+  def dedupPoints(jsPaths: js.Array[js.Array[js.Array[Double]]], epsilon: Double): js.Array[js.Array[js.Array[Double]]] = {
+    val paths = jsPaths.map(points => points.map(p => Vec2(p(0), p(1))).toSeq).toSeq
+    paths.map(points => Planning.dedupPoints(points, epsilon)).map { ps => ps.map { p => js.Array(p.x, p.y) }.toJSArray }.toJSArray
+  }
   def optimize(jsPaths: js.Array[js.Array[js.Array[Double]]]): js.Array[js.Array[js.Array[Double]]] = {
     if (jsPaths.length == 0) return jsPaths
     val paths = jsPaths.map(points => points.map(p => Vec2(p(0), p(1))).toSeq).toSeq

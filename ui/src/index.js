@@ -8,6 +8,7 @@ const scale = 3 // px/mm
 const initialState = {
   penUpHeight: 50,
   penDownHeight: 60,
+  resolution: 0,
   paperSize: Planning.paperSizes.ArchA.landscape,
   landscape: true,
   marginMm: 20,
@@ -27,6 +28,8 @@ function reducer(state, action) {
       return {...state, penUpHeight: action.value}
     case 'SET_PEN_DOWN_HEIGHT':
       return {...state, penDownHeight: action.value}
+    case 'SET_RESOLUTION':
+      return {...state, resolution: action.value}
     case 'SET_PAPER_SIZE':
       const landscape = action.size.size.x === action.size.landscape.size.x
         && action.size.size.y === action.size.landscape.size.y
@@ -59,6 +62,7 @@ const doReplan = () => async (dispatch, getState) => {
     selectedLayers: state.selectedLayers,
     penUpHeight: state.penUpHeight,
     penDownHeight: state.penDownHeight,
+    resolution: state.resolution,
   }
   const plan = await replan(state.paths, planOptions)
   dispatch({type: 'SET_PLAN', plan, planOptions})
@@ -285,6 +289,7 @@ function PlotButtons({state, driver}) {
   const needsReplan = state.plan != null && (
     state.plannedOptions.penUpHeight !== state.penUpHeight ||
     state.plannedOptions.penDownHeight !== state.penDownHeight ||
+    state.plannedOptions.resolution !== state.resolution ||
     state.plannedOptions.marginMm !== state.marginMm ||
     state.plannedOptions.paperSize.size.x !== state.paperSize.size.x ||
     state.plannedOptions.paperSize.size.y !== state.paperSize.size.y ||
@@ -295,6 +300,20 @@ function PlotButtons({state, driver}) {
         ? <button onClick={() => dispatch(doReplan())}>replan</button>
         : <button disabled={state.plan == null} onClick={() => plot(state.plan)}>plot</button> }
     <button onClick={cancel}>cancel</button>
+  </div>
+}
+
+function PlanOptions({state}) {
+  const dispatch = useContext(DispatchContext)
+  return <div>
+    <div>
+      point-joining radius: <input
+        type="number"
+        value={state.resolution}
+        step="0.1"
+        onChange={e => dispatch({type: 'SET_RESOLUTION', value: Number(e.target.value)})}
+      /> mm
+    </div>
   </div>
 }
 
@@ -336,6 +355,7 @@ function Root({driver}) {
     <div>
       <PenHeight state={state} driver={driver} />
       <PaperConfig state={state} />
+      <PlanOptions state={state} />
       <MotorControl driver={driver} />
       <PlanStatistics plan={state.plan} />
       <PlanPreview state={state} />
@@ -361,7 +381,7 @@ function readSvg(svgString) {
   return timed("svgToPaths")(() => svgToPaths(svgString))
 }
 
-async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight}) {
+async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight, resolution}) {
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
   const scaledToPaper = timed("scaledToPaper")(() => Planning.scaleToPaper(paths, paperSize, marginMm))
@@ -372,8 +392,10 @@ async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, 
   const scaledToPaperSelected = scaledToPaper.filter((path, i) =>
     selectedLayers.has(paths[i].stroke))
 
+  const deduped = resolution === 0 ? scaledToPaperSelected : Planning.dedupPoints(scaledToPaperSelected, resolution)
+
   // Optimize based on just the selected layers.
-  const optimized = timed("optimize")(() => Planning.optimize(scaledToPaperSelected))
+  const optimized = timed("optimize")(() => Planning.optimize(deduped))
 
   // Convert the paths to units of "steps".
   const {stepsPerMm} = Device.Axidraw
