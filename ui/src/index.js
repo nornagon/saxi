@@ -1,4 +1,4 @@
-import React, { useState, useRef, useReducer, useEffect, useMemo, useContext, useLayoutEffect, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useContext, useLayoutEffect, Fragment } from 'react'
 import { svgToPaths } from './svg-to-paths'
 import { useThunkReducer } from './thunk-reducer'
 import ReactDOM from 'react-dom'
@@ -23,31 +23,31 @@ const DispatchContext = React.createContext(null)
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'SET_PEN_UP_HEIGHT':
-      return {...state, penUpHeight: action.value}
-    case 'SET_PEN_DOWN_HEIGHT':
-      return {...state, penDownHeight: action.value}
-    case 'SET_PAPER_SIZE':
-      const landscape = action.size.size.x === action.size.landscape.size.x
-        && action.size.size.y === action.size.landscape.size.y
-      return {...state, paperSize: action.size, landscape}
-    case 'SET_LANDSCAPE':
-      const paperSize = state.paperSize[action.value ? 'landscape' : 'portrait']
-      return {...state, landscape: action.value, paperSize}
-    case 'SET_MARGIN':
-      return {...state, marginMm: action.value}
-    case 'SET_PATHS':
-      const {paths, layers, selectedLayers} = action
-      return {...state, plan: null, paths, layers, selectedLayers}
-    case 'SET_PLAN':
-      return {...state, plan: action.plan, plannedOptions: action.planOptions}
-    case 'SET_LAYERS':
-      return {...state, selectedLayers: action.selectedLayers}
-    case 'SET_PROGRESS':
-      return {...state, progress: action.motionIdx}
-    default:
-      console.warn(`Unrecognized action type '${action.type}'`)
-      return state
+  case 'SET_PEN_UP_HEIGHT':
+    return {...state, penUpHeight: action.value}
+  case 'SET_PEN_DOWN_HEIGHT':
+    return {...state, penDownHeight: action.value}
+  case 'SET_PAPER_SIZE':
+    const landscape = action.size.size.x === action.size.landscape.size.x
+      && action.size.size.y === action.size.landscape.size.y
+    return {...state, paperSize: action.size, landscape}
+  case 'SET_LANDSCAPE':
+    const paperSize = state.paperSize[action.value ? 'landscape' : 'portrait']
+    return {...state, landscape: action.value, paperSize}
+  case 'SET_MARGIN':
+    return {...state, marginMm: action.value}
+  case 'SET_PATHS':
+    const {paths, layers, selectedLayers} = action
+    return {...state, plan: null, paths, layers, selectedLayers}
+  case 'SET_PLAN':
+    return {...state, plan: action.plan, plannedOptions: action.planOptions}
+  case 'SET_LAYERS':
+    return {...state, selectedLayers: action.selectedLayers}
+  case 'SET_PROGRESS':
+    return {...state, progress: action.motionIdx}
+  default:
+    console.warn(`Unrecognized action type '${action.type}'`)
+    return state
   }
 }
 
@@ -85,7 +85,7 @@ function PenHeight({state, driver}) {
     const height = Device.Axidraw.penPctToPos(penDownHeight)
     driver.setPenHeight(height, 1000)
   }
-  return <>
+  return <Fragment>
     <div>
       pen up:
       <input type="number" min="0" max="100"
@@ -104,7 +104,7 @@ function PenHeight({state, driver}) {
       <button onClick={penUp}>pen up</button>
       <button onClick={penDown}>pen down</button>
     </div>
-  </>
+  </Fragment>
 }
 
 function PaperConfig({state}) {
@@ -292,8 +292,8 @@ function PlotButtons({state, driver}) {
   )
   return <div>
     {needsReplan
-        ? <button onClick={() => dispatch(doReplan())}>replan</button>
-        : <button disabled={state.plan == null} onClick={() => plot(state.plan)}>plot</button> }
+      ? <button onClick={() => dispatch(doReplan())}>replan</button>
+      : <button disabled={state.plan == null} onClick={() => plot(state.plan)}>plot</button> }
     <button onClick={cancel}>cancel</button>
   </div>
 }
