@@ -18,6 +18,14 @@ module.exports = {
     "plugins": [
         "react"
     ],
+    "globals": {
+        "Device": true,
+        "Planning": true,
+        "Driver": true,
+        "PaperSize": true,
+        "Vec2": true,
+        "Util": true,
+    },
     "rules": {
         "indent": [
             "error",

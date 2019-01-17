@@ -130,7 +130,7 @@ function PaperConfig({state}) {
       onChange={setPaperSize}
     >
       {Object.keys(Planning.paperSizes).map(name =>
-        <option>{name}</option>
+        <option key={name}>{name}</option>
       )}
       <option>Custom</option>
     </select>
@@ -179,6 +179,7 @@ function PlanPreview({state}) {
       return <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
         {lines.map((line, i) =>
           <path
+            key={i}
             d={line.reduce((m, {x, y}, j) => m + `${j === 0 ? 'M' : 'L'}${x} ${y}`, '')}
             style={i % 2 === 0 ? {stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 0.5} : {}}
           />
@@ -192,7 +193,7 @@ function PlanPreview({state}) {
     let cancelled = false
     if (state.progress != null) {
       const startingTime = Date.now()
-      function updateProgress() {
+      const updateProgress = () => {
         if (cancelled) return
         setMicroprogress(Date.now() - startingTime)
         rafHandle = requestAnimationFrame(updateProgress)
@@ -227,7 +228,7 @@ function PlanPreview({state}) {
             style={{stroke: 'rgba(255, 0, 0, 0.4)', strokeWidth: 0.5}}
           />
           <path
-            d={`M-10 0l20 0M0 -10l0 20`}
+            d="M-10 0l20 0M0 -10l0 20"
             style={{stroke: 'rgba(255, 0, 0, 0.8)', strokeWidth: 2}}
           />
         </g>
@@ -252,12 +253,12 @@ function LayerSelector({state}) {
   }
   return <div>
     <select multiple={true} value={[...state.selectedLayers]} onChange={layersChanged}>
-      {state.layers.map(layer => <option>{layer}</option>)}
+      {state.layers.map(layer => <option key={layer}>{layer}</option>)}
     </select>
   </div>
 }
 
-function PlotButtons({state, driver}) {
+function PlotButtons({state }) {
   const dispatch = useContext(DispatchContext)
   function cancel() {
     // TODO: move to Driver.scala
@@ -312,7 +313,7 @@ function Root({driver}) {
       const item = e.dataTransfer.items[0]
       const file = item.getAsFile()
       const reader = new FileReader()
-      reader.onload = e => {
+      reader.onload = () => {
         dispatch(setPaths(readSvg(reader.result)))
       }
       reader.readAsText(file)
@@ -340,7 +341,7 @@ function Root({driver}) {
       <PlanStatistics plan={state.plan} />
       <PlanPreview state={state} />
       <LayerSelector state={state} />
-      <PlotButtons state={state} driver={driver} />
+      <PlotButtons state={state} />
     </div>
   </DispatchContext.Provider>
 }
@@ -358,13 +359,13 @@ function timed(name) {
 }
 
 function readSvg(svgString) {
-  return timed("svgToPaths")(() => svgToPaths(svgString))
+  return timed('svgToPaths')(() => svgToPaths(svgString))
 }
 
 async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight}) {
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
-  const scaledToPaper = timed("scaledToPaper")(() => Planning.scaleToPaper(paths, paperSize, marginMm))
+  const scaledToPaper = timed('scaledToPaper')(() => Planning.scaleToPaper(paths, paperSize, marginMm))
 
   // Rescaling loses the stroke info, so refer back to the original paths to
   // filter based on the stroke. Rescaling doesn't change the number or order
@@ -373,7 +374,7 @@ async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, 
     selectedLayers.has(paths[i].stroke))
 
   // Optimize based on just the selected layers.
-  const optimized = timed("optimize")(() => Planning.optimize(scaledToPaperSelected))
+  const optimized = timed('optimize')(() => Planning.optimize(scaledToPaperSelected))
 
   // Convert the paths to units of "steps".
   const {stepsPerMm} = Device.Axidraw
@@ -382,7 +383,7 @@ async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, 
   // And finally, motion planning.
   const penUpPos = Device.Axidraw.penPctToPos(penUpHeight)
   const penDownPos = Device.Axidraw.penPctToPos(penDownHeight)
-  const plan = timed("plan")(() => Planning.plan(inSteps, penUpPos, penDownPos))
+  const plan = timed('plan')(() => Planning.plan(inSteps, penUpPos, penDownPos))
 
   return plan
 }
