@@ -14,8 +14,8 @@ module.exports = {
         use: ['babel-loader']
       },
       {
-        test: /\.less$/,
-        loader: 'less-loader' // compiles Less to CSS
+        test: /\.css$/,
+        use: ['style-loader', 'css-loader'],
       }
     ]
   },
