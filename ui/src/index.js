@@ -3,7 +3,10 @@ import { svgToPaths } from './svg-to-paths'
 import { useThunkReducer } from './thunk-reducer'
 import ReactDOM from 'react-dom'
 
-const scale = 3 // px/mm
+// TODO: this doesn't work
+// import './saxi.css'
+
+const scale = 2 // px/mm
 
 const initialState = {
   penUpHeight: 50,
@@ -86,25 +89,43 @@ function PenHeight({state, driver}) {
     driver.setPenHeight(height, 1000)
   }
   return <Fragment>
-    <div>
-      pen up:
-      <input type="number" min="0" max="100"
-        value={penUpHeight}
-        onChange={e => setPenUpHeight(parseInt(e.target.value))}
-      />
+    <div className="flex">
+      <label className="pen-label">
+        up value
+        <input type="number" min="0" max="100"
+          value={penUpHeight}
+          onChange={e => setPenUpHeight(parseInt(e.target.value))}
+        />
+      </label>
+      <label className="pen-label">
+        down value
+        <input type="number" min="0" max="100"
+          value={penDownHeight}
+          onChange={e => setPenDownHeight(parseInt(e.target.value))}
+        />
+      </label>
     </div>
-    <div>
-      pen down:
-      <input type="number" min="0" max="100"
-        value={penDownHeight}
-        onChange={e => setPenDownHeight(parseInt(e.target.value))}
-      />
-    </div>
-    <div>
+    <div className="flex">
       <button onClick={penUp}>pen up</button>
       <button onClick={penDown}>pen down</button>
     </div>
   </Fragment>
+}
+
+function SwapPaperSizesButton({ onClick }) {
+  return <svg
+    className="paper-sizes__swap"
+    xmlns="http://www.w3.org/2000/svg"
+    width="14.05"
+    height="11.46"
+    viewBox="0 0 14.05 11.46"
+    onClick={onClick}
+  >
+    <g>
+      <polygon points="14.05 3.04 8.79 0 8.79 1.78 1.38 1.78 1.38 4.29 8.79 4.29 8.79 6.08 14.05 3.04" style={{fill: '#8e75b6'}} />
+      <polygon points="0 8.43 5.26 11.46 5.26 9.68 12.67 9.68 12.67 7.17 5.26 7.17 5.26 5.39 0 8.43" style={{fill: '#8e75b6'}} />
+    </g>
+  </svg>
 }
 
 function PaperConfig({state}) {
@@ -134,29 +155,33 @@ function PaperConfig({state}) {
       )}
       <option>Custom</option>
     </select>
-    <input
-      type="number"
-      value={state.paperSize.size.x}
-      onChange={e => setCustomPaperSize(Number(e.target.value), state.paperSize.size.y)}
-    /> &times; <input
-      type="number"
-      value={state.paperSize.size.y}
-      onChange={e => setCustomPaperSize(state.paperSize.size.x, Number(e.target.value))}
-    /> mm
+    <div className="paper-sizes">
+      <label className="paper-label">
+        width (mm)
+        <input
+          type="number"
+          value={state.paperSize.size.x}
+          onChange={e => setCustomPaperSize(Number(e.target.value), state.paperSize.size.y)}
+        />
+      </label>
+      <SwapPaperSizesButton onClick={() => dispatch({type: 'SET_LANDSCAPE', value: !state.landscape})} />
+      <label className="paper-label">
+        height (mm)
+        <input
+          type="number"
+          value={state.paperSize.size.y}
+          onChange={e => setCustomPaperSize(state.paperSize.size.x, Number(e.target.value))}
+        />
+      </label>
+    </div>
     <label>
+      margin (mm)
       <input
-        type="checkbox"
-        checked={state.landscape}
-        onChange={e => dispatch({type: 'SET_LANDSCAPE', value: e.target.checked})}
-      /> landscape
-    </label>
-    <div>
-      margin: <input
         type="number"
         value={state.marginMm}
         onChange={e => dispatch({type: 'SET_MARGIN', value: Number(e.target.value)})}
-      /> mm
-    </div>
+      />
+    </label>
   </div>
 }
 
@@ -167,8 +192,10 @@ function MotorControl({driver}) {
 }
 
 function PlanStatistics({plan}) {
-  if (!plan) return null
-  return <div>Duration: {Util.formatDuration(plan.duration)}</div>
+  return <div className="duration">
+    <div>Duration</div>
+    <div><strong>{plan && plan.duration ? Util.formatDuration(plan.duration) : '-'}</strong></div>
+  </div>
 }
 
 function PlanPreview({state}) {
@@ -225,11 +252,11 @@ function PlanPreview({state}) {
         <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
           <path
             d={`M-${ps.size.x * scale * Device.Axidraw.stepsPerMm} 0l${ps.size.x * 2 * scale * Device.Axidraw.stepsPerMm} 0M0 -${ps.size.y * scale * Device.Axidraw.stepsPerMm}l0 ${ps.size.y * 2 * scale * Device.Axidraw.stepsPerMm}`}
-            style={{stroke: 'rgba(255, 0, 0, 0.4)', strokeWidth: 0.5}}
+            style={{stroke: 'rgba(222, 114, 114, 0.6)', strokeWidth: 1}}
           />
           <path
             d="M-10 0l20 0M0 -10l0 20"
-            style={{stroke: 'rgba(255, 0, 0, 0.8)', strokeWidth: 2}}
+            style={{stroke: 'rgba(222, 114, 114, 1)', strokeWidth: 2}}
           />
         </g>
       </svg>
@@ -252,9 +279,18 @@ function LayerSelector({state}) {
     dispatch({type: 'SET_LAYERS', selectedLayers})
   }
   return <div>
-    <select multiple={true} value={[...state.selectedLayers]} onChange={layersChanged}>
-      {state.layers.map(layer => <option key={layer}>{layer}</option>)}
-    </select>
+    <label>
+      layers
+      <select
+        className="layer-select"
+        multiple={true}
+        value={[...state.selectedLayers]}
+        onChange={layersChanged}
+        size="3"
+      >
+        {state.layers.map(layer => <option key={layer}>{layer}</option>)}
+      </select>
+    </label>
   </div>
 }
 
@@ -291,11 +327,26 @@ function PlotButtons({state }) {
     state.plannedOptions.paperSize.size.y !== state.paperSize.size.y ||
     !setEq(state.plannedOptions.selectedLayers, state.selectedLayers)
   )
-  return <div>
-    {needsReplan
-      ? <button onClick={() => dispatch(doReplan())}>replan</button>
-      : <button disabled={state.plan == null} onClick={() => plot(state.plan)}>plot</button> }
-    <button onClick={cancel}>cancel</button>
+  return <div >
+    {
+      needsReplan
+        ? <button
+          className="replan-button"
+          onClick={() => dispatch(doReplan())}>
+            Replan
+        </button>
+        : <button
+          className="plot-button"
+          disabled={state.plan == null}
+          onClick={() => plot(state.plan)}>
+            Plot
+        </button>
+    }
+    <button
+      className="cancel-button"
+      onClick={cancel}
+      disabled={state.plan == null}
+    >Cancel</button>
   </div>
 }
 
@@ -315,10 +366,18 @@ function Root({driver}) {
       const reader = new FileReader()
       reader.onload = () => {
         dispatch(setPaths(readSvg(reader.result)))
+        document.body.classList.remove('dragover')
       }
       reader.readAsText(file)
     }
-    const ondragover = e => { e.preventDefault() }
+    const ondragover = e => {
+      e.preventDefault()
+      document.body.classList.add('dragover')
+    }
+    const ondragleave = e => {
+      e.preventDefault()
+      document.body.classList.remove('dragover')
+    }
     const onpaste = e => {
       e.clipboardData.items[0].getAsString(s => {
         dispatch(setPaths(readSvg(s)))
@@ -326,6 +385,7 @@ function Root({driver}) {
     }
     document.body.addEventListener('drop', ondrop)
     document.body.addEventListener('dragover', ondragover)
+    document.body.addEventListener('dragleave', ondragleave)
     document.addEventListener('paste', onpaste)
     return () => {
       document.body.removeEventListener('drop', ondrop)
@@ -334,14 +394,31 @@ function Root({driver}) {
     }
   })
   return <DispatchContext.Provider value={dispatch}>
-    <div>
-      <PenHeight state={state} driver={driver} />
-      <PaperConfig state={state} />
-      <MotorControl driver={driver} />
-      <PlanStatistics plan={state.plan} />
+    <div className="control-panel">
+      <div className="saxi-title">
+        <span className="teal">s</span><span className="red">axi</span>
+      </div>
+      <div className="section-header">pen</div>
+      <div className="section-body">
+        <PenHeight state={state} driver={driver} />
+        <MotorControl driver={driver} />
+      </div>
+      <div className="section-header">paper</div>
+      <div className="section-body">
+        <PaperConfig state={state} />
+        <LayerSelector state={state} />
+      </div>
+      <div className="spacer" />
+      <div className="control-panel-bottom">
+        <div className="section-header">plot</div>
+        <div className="section-body section-body__plot">
+          <PlanStatistics plan={state.plan} />
+          <PlotButtons state={state} />
+        </div>
+      </div>
+    </div>
+    <div className="preview-area">
       <PlanPreview state={state} />
-      <LayerSelector state={state} />
-      <PlotButtons state={state} />
     </div>
   </DispatchContext.Provider>
 }
