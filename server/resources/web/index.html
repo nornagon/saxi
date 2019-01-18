@@ -4,10 +4,11 @@
     <title>saxi</title>
     <script src="/js/path-data-polyfill.js"></script>
     <script src="/js/driver.js"></script>
-    <link href="https://fonts.googleapis.com/css?family=Work+Sans:400,900" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Work+Sans:400,700,900" rel="stylesheet">
     <style>
       :root {
         --teal: #75D5CD;
+        --teal-light: #DCF4F2;
         --teal-dark: #3F9991;
         --purple: #8E75B6;
         --purple-light: #E3DCED;
@@ -106,6 +107,7 @@
         font-size: 36px;
         font-weight: 900;
         text-align: center;
+        user-select: none;
       }
 
       .section-header {
@@ -115,6 +117,7 @@
         font-size: 18px;
         font-weight: 900;
         text-align: center;
+        user-select: none;
       }
 
       .section-body {
@@ -127,7 +130,7 @@
         font-size: 10px;
         text-align: center;
         line-height: 1.6;
-        margin-bottom: 0.5rem;
+        user-select: none;
       }
 
       input[type=number] {
@@ -135,10 +138,12 @@
         padding: 0.3rem;
         margin-bottom: 0.5rem;
         border: 1px solid var(--purple);
-        border-radius: 2px;
         font-family: 'Work Sans', sans-serif;
         font-size: 14px;
         color: var(--purple);
+        background-color: white;
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        outline: none;
       }
 
       button, select {
@@ -147,15 +152,29 @@
         padding: 0.4rem;
         font-family: 'Work Sans', sans-serif;
         font-size: 14px;
-        background-color: var(--purple);
-        color: white;
-        border: none;
-        border-radius: 2px;
+        font-weight: 700;
+        background-color: white;
+        color: var(--purple);
+        border: 1px solid var(--purple);
+        border-radius: 0;
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
         cursor: pointer;
+        outline: none;
       }
 
-      button:hover, select:hover {
-        background-color: var(--purple-dark);
+      button:not(:disabled):hover,
+      select:not(:disabled):hover,
+      button:not(:disabled):focus,
+      select:focus,
+      input[type=number]:hover,
+      input[type=number]:focus {
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.25);
+      }
+
+      button:not(:disabled):active {
+        box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.25), inset 1px 1px 1px rgba(0, 0, 0, 0.1);
+        background-color: #fafafa;
+        color: var(--purple-dark);
       }
 
       select {
@@ -196,6 +215,10 @@
         width: 10%;
         margin-bottom: 16px;
         cursor: pointer;
+        fill: var(--purple);
+      }
+      .paper-sizes__swap:hover {
+        fill: var(--purple-dark);
       }
 
       .layer-select {
@@ -226,23 +249,38 @@
         font-size: 18px;
       }
       .section-body__plot button:disabled {
-        background-color: var(--purple-light);
+        /*background-color: var(--purple-light);*/
+        /*color: var(--purple-light);*/
         cursor: default;
       }
 
       .replan-button {
-        background-color: var(--purple);
+        /*color: var(--purple);*/
       }
 
       .plot-button {
+        color: white;
+        background-color: var(--teal);
+        border: 1px solid var(--teal-dark);
+      }
+      .plot-button:not(:disabled):active {
+        color: white;
         background-color: var(--teal);
       }
-      .plot-button:hover {
-        background-color: var(--teal-dark);
+      .plot-button:disabled {
+        color: var(--teal-light);
+        background-color: white;
+      }
+      .plot-button--plotting {
+        background-color: var(--teal-light);
       }
 
       .cancel-button {
-        background-color: var(--purple-light);
+        background-color: white;
+        color: var(--purple-light);
+      }
+      .cancel-button--active {
+        color: var(--purple);
       }
 
 
@@ -250,7 +288,10 @@
 
       .purple { color: var(--purple); }
       .teal { color: var(--teal); }
+      .teal-dark { color: var(--teal-dark); }
       .red { color: var(--red); }
+
+      .reg { font-weight: 400; }
 
       .flex {
         display: flex;

@@ -122,8 +122,8 @@ function SwapPaperSizesButton({ onClick }) {
     onClick={onClick}
   >
     <g>
-      <polygon points="14.05 3.04 8.79 0 8.79 1.78 1.38 1.78 1.38 4.29 8.79 4.29 8.79 6.08 14.05 3.04" style={{fill: '#8e75b6'}} />
-      <polygon points="0 8.43 5.26 11.46 5.26 9.68 12.67 9.68 12.67 7.17 5.26 7.17 5.26 5.39 0 8.43" style={{fill: '#8e75b6'}} />
+      <polygon points="14.05 3.04 8.79 0 8.79 1.78 1.38 1.78 1.38 4.29 8.79 4.29 8.79 6.08 14.05 3.04" />
+      <polygon points="0 8.43 5.26 11.46 5.26 9.68 12.67 9.68 12.67 7.17 5.26 7.17 5.26 5.39 0 8.43" />
     </g>
   </svg>
 }
@@ -336,16 +336,16 @@ function PlotButtons({state }) {
             Replan
         </button>
         : <button
-          className="plot-button"
-          disabled={state.plan == null}
+          className={`plot-button ${state.progress ? 'plot-button--plotting' : ''}`}
+          disabled={state.plan == null || state.progress}
           onClick={() => plot(state.plan)}>
-            Plot
+            {state.plan && state.progress ? 'Plotting...' : 'Plot'}
         </button>
     }
     <button
-      className="cancel-button"
+      className={`cancel-button ${state.progress ? 'cancel-button--active' : ''}`}
       onClick={cancel}
-      disabled={state.plan == null}
+      disabled={state.plan == null || !state.progress}
     >Cancel</button>
   </div>
 }
@@ -395,8 +395,8 @@ function Root({driver}) {
   })
   return <DispatchContext.Provider value={dispatch}>
     <div className="control-panel">
-      <div className="saxi-title">
-        <span className="teal">s</span><span className="red">axi</span>
+      <div className="saxi-title red">
+        <span className="red reg">s</span><span className="teal">axi</span>
       </div>
       <div className="section-header">pen</div>
       <div className="section-body">
