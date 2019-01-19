@@ -1,9 +1,12 @@
-import React, { useState, useRef, useReducer, useEffect, useMemo, useContext, useLayoutEffect, useCallback } from 'react'
+import React, { useState, useEffect, useMemo, useContext, useLayoutEffect, Fragment } from 'react'
 import { svgToPaths } from './svg-to-paths'
 import { useThunkReducer } from './thunk-reducer'
 import ReactDOM from 'react-dom'
 
-const scale = 3 // px/mm
+// TODO: this doesn't work
+// import './saxi.css'
+
+const scale = 2 // px/mm
 
 const initialState = {
   penUpHeight: 50,
@@ -24,33 +27,33 @@ const DispatchContext = React.createContext(null)
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'SET_PEN_UP_HEIGHT':
-      return {...state, penUpHeight: action.value}
-    case 'SET_PEN_DOWN_HEIGHT':
-      return {...state, penDownHeight: action.value}
-    case 'SET_RESOLUTION':
-      return {...state, resolution: action.value}
-    case 'SET_PAPER_SIZE':
-      const landscape = action.size.size.x === action.size.landscape.size.x
-        && action.size.size.y === action.size.landscape.size.y
-      return {...state, paperSize: action.size, landscape}
-    case 'SET_LANDSCAPE':
-      const paperSize = state.paperSize[action.value ? 'landscape' : 'portrait']
-      return {...state, landscape: action.value, paperSize}
-    case 'SET_MARGIN':
-      return {...state, marginMm: action.value}
-    case 'SET_PATHS':
-      const {paths, layers, selectedLayers} = action
-      return {...state, plan: null, paths, layers, selectedLayers}
-    case 'SET_PLAN':
-      return {...state, plan: action.plan, plannedOptions: action.planOptions}
-    case 'SET_LAYERS':
-      return {...state, selectedLayers: action.selectedLayers}
-    case 'SET_PROGRESS':
-      return {...state, progress: action.motionIdx}
-    default:
-      console.warn(`Unrecognized action type '${action.type}'`)
-      return state
+  case 'SET_PEN_UP_HEIGHT':
+    return {...state, penUpHeight: action.value}
+  case 'SET_PEN_DOWN_HEIGHT':
+    return {...state, penDownHeight: action.value}
+  case 'SET_RESOLUTION':
+    return {...state, resolution: action.value}
+  case 'SET_PAPER_SIZE':
+    const landscape = action.size.size.x === action.size.landscape.size.x
+      && action.size.size.y === action.size.landscape.size.y
+    return {...state, paperSize: action.size, landscape}
+  case 'SET_LANDSCAPE':
+    const paperSize = state.paperSize[action.value ? 'landscape' : 'portrait']
+    return {...state, landscape: action.value, paperSize}
+  case 'SET_MARGIN':
+    return {...state, marginMm: action.value}
+  case 'SET_PATHS':
+    const {paths, layers, selectedLayers} = action
+    return {...state, plan: null, paths, layers, selectedLayers}
+  case 'SET_PLAN':
+    return {...state, plan: action.plan, plannedOptions: action.planOptions}
+  case 'SET_LAYERS':
+    return {...state, selectedLayers: action.selectedLayers}
+  case 'SET_PROGRESS':
+    return {...state, progress: action.motionIdx}
+  default:
+    console.warn(`Unrecognized action type '${action.type}'`)
+    return state
   }
 }
 
@@ -89,26 +92,44 @@ function PenHeight({state, driver}) {
     const height = Device.Axidraw.penPctToPos(penDownHeight)
     driver.setPenHeight(height, 1000)
   }
-  return <>
-    <div>
-      pen up:
-      <input type="number" min="0" max="100"
-        value={penUpHeight}
-        onChange={e => setPenUpHeight(parseInt(e.target.value))}
-      />
+  return <Fragment>
+    <div className="flex">
+      <label className="pen-label">
+        up value
+        <input type="number" min="0" max="100"
+          value={penUpHeight}
+          onChange={e => setPenUpHeight(parseInt(e.target.value))}
+        />
+      </label>
+      <label className="pen-label">
+        down value
+        <input type="number" min="0" max="100"
+          value={penDownHeight}
+          onChange={e => setPenDownHeight(parseInt(e.target.value))}
+        />
+      </label>
     </div>
-    <div>
-      pen down:
-      <input type="number" min="0" max="100"
-        value={penDownHeight}
-        onChange={e => setPenDownHeight(parseInt(e.target.value))}
-      />
-    </div>
-    <div>
+    <div className="flex">
       <button onClick={penUp}>pen up</button>
       <button onClick={penDown}>pen down</button>
     </div>
-  </>
+  </Fragment>
+}
+
+function SwapPaperSizesButton({ onClick }) {
+  return <svg
+    className="paper-sizes__swap"
+    xmlns="http://www.w3.org/2000/svg"
+    width="14.05"
+    height="11.46"
+    viewBox="0 0 14.05 11.46"
+    onClick={onClick}
+  >
+    <g>
+      <polygon points="14.05 3.04 8.79 0 8.79 1.78 1.38 1.78 1.38 4.29 8.79 4.29 8.79 6.08 14.05 3.04" />
+      <polygon points="0 8.43 5.26 11.46 5.26 9.68 12.67 9.68 12.67 7.17 5.26 7.17 5.26 5.39 0 8.43" />
+    </g>
+  </svg>
 }
 
 function PaperConfig({state}) {
@@ -134,33 +155,37 @@ function PaperConfig({state}) {
       onChange={setPaperSize}
     >
       {Object.keys(Planning.paperSizes).map(name =>
-        <option>{name}</option>
+        <option key={name}>{name}</option>
       )}
       <option>Custom</option>
     </select>
-    <input
-      type="number"
-      value={state.paperSize.size.x}
-      onChange={e => setCustomPaperSize(Number(e.target.value), state.paperSize.size.y)}
-    /> &times; <input
-      type="number"
-      value={state.paperSize.size.y}
-      onChange={e => setCustomPaperSize(state.paperSize.size.x, Number(e.target.value))}
-    /> mm
+    <div className="paper-sizes">
+      <label className="paper-label">
+        width (mm)
+        <input
+          type="number"
+          value={state.paperSize.size.x}
+          onChange={e => setCustomPaperSize(Number(e.target.value), state.paperSize.size.y)}
+        />
+      </label>
+      <SwapPaperSizesButton onClick={() => dispatch({type: 'SET_LANDSCAPE', value: !state.landscape})} />
+      <label className="paper-label">
+        height (mm)
+        <input
+          type="number"
+          value={state.paperSize.size.y}
+          onChange={e => setCustomPaperSize(state.paperSize.size.x, Number(e.target.value))}
+        />
+      </label>
+    </div>
     <label>
+      margin (mm)
       <input
-        type="checkbox"
-        checked={state.landscape}
-        onChange={e => dispatch({type: 'SET_LANDSCAPE', value: e.target.checked})}
-      /> landscape
-    </label>
-    <div>
-      margin: <input
         type="number"
         value={state.marginMm}
         onChange={e => dispatch({type: 'SET_MARGIN', value: Number(e.target.value)})}
-      /> mm
-    </div>
+      />
+    </label>
   </div>
 }
 
@@ -171,8 +196,10 @@ function MotorControl({driver}) {
 }
 
 function PlanStatistics({plan}) {
-  if (!plan) return null
-  return <div>Duration: {Util.formatDuration(plan.duration)}</div>
+  return <div className="duration">
+    <div>Duration</div>
+    <div><strong>{plan && plan.duration ? Util.formatDuration(plan.duration) : '-'}</strong></div>
+  </div>
 }
 
 function PlanPreview({state}) {
@@ -183,6 +210,7 @@ function PlanPreview({state}) {
       return <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
         {lines.map((line, i) =>
           <path
+            key={i}
             d={line.reduce((m, {x, y}, j) => m + `${j === 0 ? 'M' : 'L'}${x} ${y}`, '')}
             style={i % 2 === 0 ? {stroke: 'rgba(0, 0, 0, 0.3)', strokeWidth: 0.5} : {}}
           />
@@ -196,7 +224,7 @@ function PlanPreview({state}) {
     let cancelled = false
     if (state.progress != null) {
       const startingTime = Date.now()
-      function updateProgress() {
+      const updateProgress = () => {
         if (cancelled) return
         setMicroprogress(Date.now() - startingTime)
         rafHandle = requestAnimationFrame(updateProgress)
@@ -228,11 +256,11 @@ function PlanPreview({state}) {
         <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
           <path
             d={`M-${ps.size.x * scale * Device.Axidraw.stepsPerMm} 0l${ps.size.x * 2 * scale * Device.Axidraw.stepsPerMm} 0M0 -${ps.size.y * scale * Device.Axidraw.stepsPerMm}l0 ${ps.size.y * 2 * scale * Device.Axidraw.stepsPerMm}`}
-            style={{stroke: 'rgba(255, 0, 0, 0.4)', strokeWidth: 0.5}}
+            style={{stroke: 'rgba(222, 114, 114, 0.6)', strokeWidth: 1}}
           />
           <path
-            d={`M-10 0l20 0M0 -10l0 20`}
-            style={{stroke: 'rgba(255, 0, 0, 0.8)', strokeWidth: 2}}
+            d="M-10 0l20 0M0 -10l0 20"
+            style={{stroke: 'rgba(222, 114, 114, 1)', strokeWidth: 2}}
           />
         </g>
       </svg>
@@ -255,13 +283,22 @@ function LayerSelector({state}) {
     dispatch({type: 'SET_LAYERS', selectedLayers})
   }
   return <div>
-    <select multiple={true} value={[...state.selectedLayers]} onChange={layersChanged}>
-      {state.layers.map(layer => <option>{layer}</option>)}
-    </select>
+    <label>
+      layers
+      <select
+        className="layer-select"
+        multiple={true}
+        value={[...state.selectedLayers]}
+        onChange={layersChanged}
+        size="3"
+      >
+        {state.layers.map(layer => <option key={layer}>{layer}</option>)}
+      </select>
+    </label>
   </div>
 }
 
-function PlotButtons({state, driver}) {
+function PlotButtons({state }) {
   const dispatch = useContext(DispatchContext)
   function cancel() {
     // TODO: move to Driver.scala
@@ -295,11 +332,26 @@ function PlotButtons({state, driver}) {
     state.plannedOptions.paperSize.size.y !== state.paperSize.size.y ||
     !setEq(state.plannedOptions.selectedLayers, state.selectedLayers)
   )
-  return <div>
-    {needsReplan
-        ? <button onClick={() => dispatch(doReplan())}>replan</button>
-        : <button disabled={state.plan == null} onClick={() => plot(state.plan)}>plot</button> }
-    <button onClick={cancel}>cancel</button>
+  return <div >
+    {
+      needsReplan
+        ? <button
+          className="replan-button"
+          onClick={() => dispatch(doReplan())}>
+            Replan
+        </button>
+        : <button
+          className={`plot-button ${state.progress ? 'plot-button--plotting' : ''}`}
+          disabled={state.plan == null || state.progress}
+          onClick={() => plot(state.plan)}>
+            {state.plan && state.progress ? 'Plotting...' : 'Plot'}
+        </button>
+    }
+    <button
+      className={`cancel-button ${state.progress ? 'cancel-button--active' : ''}`}
+      onClick={cancel}
+      disabled={state.plan == null || !state.progress}
+    >Cancel</button>
   </div>
 }
 
@@ -307,12 +359,15 @@ function PlanOptions({state}) {
   const dispatch = useContext(DispatchContext)
   return <div>
     <div>
-      point-joining radius: <input
-        type="number"
-        value={state.resolution}
-        step="0.1"
-        onChange={e => dispatch({type: 'SET_RESOLUTION', value: Number(e.target.value)})}
-      /> mm
+      <label>
+        point-joining radius (mm)
+        <input
+          type="number"
+          value={state.resolution}
+          step="0.1"
+          onChange={e => dispatch({type: 'SET_RESOLUTION', value: Number(e.target.value)})}
+        />
+      </label>
     </div>
   </div>
 }
@@ -331,12 +386,20 @@ function Root({driver}) {
       const item = e.dataTransfer.items[0]
       const file = item.getAsFile()
       const reader = new FileReader()
-      reader.onload = e => {
+      reader.onload = () => {
         dispatch(setPaths(readSvg(reader.result)))
+        document.body.classList.remove('dragover')
       }
       reader.readAsText(file)
     }
-    const ondragover = e => { e.preventDefault() }
+    const ondragover = e => {
+      e.preventDefault()
+      document.body.classList.add('dragover')
+    }
+    const ondragleave = e => {
+      e.preventDefault()
+      document.body.classList.remove('dragover')
+    }
     const onpaste = e => {
       e.clipboardData.items[0].getAsString(s => {
         dispatch(setPaths(readSvg(s)))
@@ -344,6 +407,7 @@ function Root({driver}) {
     }
     document.body.addEventListener('drop', ondrop)
     document.body.addEventListener('dragover', ondragover)
+    document.body.addEventListener('dragleave', ondragleave)
     document.addEventListener('paste', onpaste)
     return () => {
       document.body.removeEventListener('drop', ondrop)
@@ -352,15 +416,32 @@ function Root({driver}) {
     }
   })
   return <DispatchContext.Provider value={dispatch}>
-    <div>
-      <PenHeight state={state} driver={driver} />
-      <PaperConfig state={state} />
-      <PlanOptions state={state} />
-      <MotorControl driver={driver} />
-      <PlanStatistics plan={state.plan} />
+    <div className="control-panel">
+      <div className="saxi-title red">
+        <span className="red reg">s</span><span className="teal">axi</span>
+      </div>
+      <div className="section-header">pen</div>
+      <div className="section-body">
+        <PenHeight state={state} driver={driver} />
+        <MotorControl driver={driver} />
+      </div>
+      <div className="section-header">paper</div>
+      <div className="section-body">
+        <PaperConfig state={state} />
+        <PlanOptions state={state} />
+        <LayerSelector state={state} />
+      </div>
+      <div className="spacer" />
+      <div className="control-panel-bottom">
+        <div className="section-header">plot</div>
+        <div className="section-body section-body__plot">
+          <PlanStatistics plan={state.plan} />
+          <PlotButtons state={state} />
+        </div>
+      </div>
+    </div>
+    <div className="preview-area">
       <PlanPreview state={state} />
-      <LayerSelector state={state} />
-      <PlotButtons state={state} driver={driver} />
     </div>
   </DispatchContext.Provider>
 }
@@ -378,13 +459,13 @@ function timed(name) {
 }
 
 function readSvg(svgString) {
-  return timed("svgToPaths")(() => svgToPaths(svgString))
+  return timed('svgToPaths')(() => svgToPaths(svgString))
 }
 
 async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight, resolution}) {
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
-  const scaledToPaper = timed("scaledToPaper")(() => Planning.scaleToPaper(paths, paperSize, marginMm))
+  const scaledToPaper = timed('scaledToPaper')(() => Planning.scaleToPaper(paths, paperSize, marginMm))
 
   // Rescaling loses the stroke info, so refer back to the original paths to
   // filter based on the stroke. Rescaling doesn't change the number or order
@@ -395,7 +476,7 @@ async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, 
   const deduped = resolution === 0 ? scaledToPaperSelected : Planning.dedupPoints(scaledToPaperSelected, resolution)
 
   // Optimize based on just the selected layers.
-  const optimized = timed("optimize")(() => Planning.optimize(deduped))
+  const optimized = timed('optimize')(() => Planning.optimize(deduped))
 
   // Convert the paths to units of "steps".
   const {stepsPerMm} = Device.Axidraw
@@ -404,7 +485,7 @@ async function replan(paths, {paperSize, marginMm, selectedLayers, penUpHeight, 
   // And finally, motion planning.
   const penUpPos = Device.Axidraw.penPctToPos(penUpHeight)
   const penDownPos = Device.Axidraw.penPctToPos(penDownHeight)
-  const plan = timed("plan")(() => Planning.plan(inSteps, penUpPos, penDownPos))
+  const plan = timed('plan')(() => Planning.plan(inSteps, penUpPos, penDownPos))
 
   return plan
 }
