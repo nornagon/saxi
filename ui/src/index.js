@@ -95,14 +95,14 @@ function PenHeight({state, driver}) {
   return <Fragment>
     <div className="flex">
       <label className="pen-label">
-        up value
+        up height (%)
         <input type="number" min="0" max="100"
           value={penUpHeight}
           onChange={e => setPenUpHeight(parseInt(e.target.value))}
         />
       </label>
       <label className="pen-label">
-        down value
+        down height (%)
         <input type="number" min="0" max="100"
           value={penDownHeight}
           onChange={e => setPenDownHeight(parseInt(e.target.value))}
