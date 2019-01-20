@@ -183,6 +183,8 @@ function PaperConfig({state}) {
       <input
         type="number"
         value={state.marginMm}
+        min="0"
+        max={Math.min(state.paperSize.size.x/2, state.paperSize.size.y/2)}
         onChange={e => dispatch({type: 'SET_MARGIN', value: Number(e.target.value)})}
       />
     </label>
@@ -265,12 +267,26 @@ function PlanPreview({state}) {
         </g>
       </svg>
   }
+  const margins = <g>
+    <rect
+      x={state.marginMm}
+      y={state.marginMm}
+      width={(ps.size.x - state.marginMm * 2)}
+      height={(ps.size.y - state.marginMm * 2)}
+      fill="none"
+      stroke="black"
+      strokeWidth="0.1"
+    />
+  </g>
   return <div className="preview">
     <svg
       width={ps.size.x * scale}
       height={ps.size.y * scale}
       viewBox={`0 0 ${ps.size.x} ${ps.size.y}`}
-    >{memoizedPlanPreview}</svg>
+    >
+      {memoizedPlanPreview}
+      {margins}
+    </svg>
     {progressIndicator}
   </div>
 }
