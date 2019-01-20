@@ -276,6 +276,7 @@ function PlanPreview({state}) {
       fill="none"
       stroke="black"
       strokeWidth="0.1"
+      strokeDasharray="1,1"
     />
   </g>
   return <div className="preview">
