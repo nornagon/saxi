@@ -192,7 +192,7 @@ function PaperConfig({state}) {
 
 function MotorControl({driver}) {
   return <div>
-    <button onClick={() => driver.limp()}>limp</button>
+    <button onClick={() => driver.limp()}>disengage motors</button>
   </div>
 }
 
