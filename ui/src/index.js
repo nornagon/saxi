@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo, useContext, useLayoutEffect, Fragment } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useContext, useLayoutEffect, Fragment } from 'react'
 import { svgToPaths } from './svg-to-paths'
 import { useThunkReducer } from './thunk-reducer'
 import ReactDOM from 'react-dom'
+import useComponentSize from '@rehooks/component-size'
 
 // TODO: this doesn't work
 // import './saxi.css'
-
-const scale = 2 // px/mm
 
 const initialState = {
   penUpHeight: 50,
@@ -204,7 +203,7 @@ function PlanStatistics({plan}) {
   </div>
 }
 
-function PlanPreview({state}) {
+function PlanPreview({state, previewSize}) {
   const ps = state.paperSize
   const memoizedPlanPreview = useMemo(() => {
     if (state.plan) {
@@ -220,6 +219,14 @@ function PlanPreview({state}) {
       </g>
     }
   }, [state.plan])
+
+  // w/h of svg.
+  // first try scaling so that h = area.h. if w < area.w, then ok.
+  // otherwise, scale so that w = area.w.
+  const {width, height} = ps.size.x / ps.size.y * previewSize.height <= previewSize.width
+    ? {width: ps.size.x / ps.size.y * previewSize.height, height: previewSize.height}
+    : {height: ps.size.y / ps.size.x * previewSize.width, width: previewSize.width}
+
   const [microprogress, setMicroprogress] = useState(0)
   useLayoutEffect(() => {
     let rafHandle = null
@@ -242,22 +249,26 @@ function PlanPreview({state}) {
       setMicroprogress(0)
     }
   }, [state.progress])
+
   let progressIndicator = null
   if (state.progress != null && state.plan != null) {
     const motion = state.plan.motion(state.progress)
     const pos = motion.$classData.name === 'saxi.Planning$XYMotion'
       ? motion.instant(Math.min(microprogress / 1000, motion.duration)).p
       : state.plan.motion(state.progress-1).p2
+    const {stepsPerMm} = Device.Axidraw
+    const posXMm = pos.x / stepsPerMm
+    const posYMm = pos.y / stepsPerMm
     progressIndicator = 
       <svg
-        width={ps.size.x * scale * 2}
-        height={ps.size.y * scale * 2}
-        viewBox={`${-ps.size.x} ${-ps.size.y} ${ps.size.x*2} ${ps.size.y*2}`}
-        style={{transform: `translateZ(0.001px) translate(${-ps.size.x*scale}px, ${-ps.size.y*scale}px) translate(${pos.x/Device.Axidraw.stepsPerMm * scale}px,${pos.y/Device.Axidraw.stepsPerMm * scale}px)`}}
+        width={width * 2}
+        height={height * 2}
+        viewBox={`${-width} ${-height} ${width*2} ${height*2}`}
+        style={{transform: `translateZ(0.001px) translate(${-width}px, ${-height}px) translate(${posXMm/ps.size.x*50}%,${posYMm/ps.size.y*50}%)`}}
       >
-        <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
+        <g>
           <path
-            d={`M-${ps.size.x * scale * Device.Axidraw.stepsPerMm} 0l${ps.size.x * 2 * scale * Device.Axidraw.stepsPerMm} 0M0 -${ps.size.y * scale * Device.Axidraw.stepsPerMm}l0 ${ps.size.y * 2 * scale * Device.Axidraw.stepsPerMm}`}
+            d={`M-${width} 0l${width * 2} 0M0 -${height}l0 ${height * 2}`}
             style={{stroke: 'rgba(222, 114, 114, 0.6)', strokeWidth: 1}}
           />
           <path
@@ -281,8 +292,8 @@ function PlanPreview({state}) {
   </g>
   return <div className="preview">
     <svg
-      width={ps.size.x * scale}
-      height={ps.size.y * scale}
+      width={width}
+      height={height}
       viewBox={`0 0 ${ps.size.x} ${ps.size.y}`}
     >
       {memoizedPlanPreview}
@@ -432,6 +443,8 @@ function Root({driver}) {
       document.removeEventListener('paste', onpaste)
     }
   })
+  const previewArea = useRef(null)
+  const previewSize = useComponentSize(previewArea)
   return <DispatchContext.Provider value={dispatch}>
     <div className="control-panel">
       <div className="saxi-title red">
@@ -457,8 +470,8 @@ function Root({driver}) {
         </div>
       </div>
     </div>
-    <div className="preview-area">
-      <PlanPreview state={state} />
+    <div className="preview-area" ref={previewArea}>
+      <PlanPreview state={state} previewSize={{width: previewSize.width - 40, height: previewSize.height - 40}} />
     </div>
   </DispatchContext.Provider>
 }
