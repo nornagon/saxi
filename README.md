@@ -23,10 +23,10 @@ saxi makes use of the low-level `LM` command introduced in EBB firmware version
 AxiDraw is running an older version of the firmware, saxi will fall back to the
 less-accurate (but still pretty accurate) `XM` command.
 
-To check what version of the EBB firmware your AxiDraw is running, run `saxi version`:
+To check what version of the EBB firmware your AxiDraw is running, run `saxi --firmware-version`:
 
 ```
-$ saxi version
+$ saxi --firmware-version
 EBBv13_and_above EB Firmware Version 2.5.3
 ```
 
