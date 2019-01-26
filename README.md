@@ -58,7 +58,7 @@ When you make a change, you'll need to re-run `npm start`
 saxi's motion planning algorithm is heavily inspired by Michael Fogleman's
 [axi](https://github.com/fogleman/axi) project.
 
-saxi's UI would be an ugly mess if it weren't for @kylestetz's discerning eye.
+saxi's UI would be an ugly mess if it weren't for [@kylestetz](https://github.com/kylestetz)'s discerning eye.
 
 Thanks to [Evil Mad Scientist](http://www.evilmadscientist.com/) for designing
 and building such a lovely machine!
