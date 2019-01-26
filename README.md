@@ -1,19 +1,17 @@
 # saxi
 ##### make plot good
 
-saxi is a command-line tool and Scala library for interacting with the [AxiDraw
-drawing machine](https://axidraw.com/) by Evil Mad Scientist. It's simple to
-use from the command line, and is exactingly precise.
+saxi is a tool for interacting with the [AxiDraw
+drawing machine](https://axidraw.com/) by Evil Mad Scientist. It comes with an
+easy-to-use interface, and is exactingly precise.
 
 ### Usage
 
 ```
-$ saxi plot --paper-size A4 drawing.svg
-$ saxi info --paper-size 5x4in --margin 0.5in --portrait drawing.svg
-Estimated duration: 20m55s
-Drawing bounds:
-  12.70 - 88.90 mm in X
-  41.21 - 85.79 mm in Y
+$ npm i -g saxi
+$ saxi
+Server listening on http://0.0.0.0:9080
+Connecting to EBB on /dev/tty.usbmodem1461
 ```
 
 ### Info
@@ -32,50 +30,35 @@ EBBv13_and_above EB Firmware Version 2.5.3
 
 To upgrade your AxiDraw's firmware, see [here](https://github.com/evil-mad/EggBot/tree/master/EBB_firmware).
 
-### Commands
-
-#### plot
-Plot an SVG file.
-#### info
-Print info about what would be plotted (like a dry-run of `plot`).
-#### version
-Query the EBB's firmware version.
-#### limp
-Disable the stepper motors.
-
 ### TODO
 
-- Manual control from the command line, e.g. XY jogging, pen height
-- Expose more tooling profile parameters as configuration options
+- Expose more tooling profile parameters as configuration options in the UI
+  - pen linger time
+  - max-vel, acceleration and cornering factor
+- Command-line usage
+  - plot
+  - info
+  - limp
+  - jogging
+  - set pen height
 
 ### Developing
 
-If you want to build & run saxi from source on your local machine, you'll need [mill](http://www.lihaoyi.com/mill/):
-
-```sh
-$ brew install mill # on macOS
-# for other OSes, see http://www.lihaoyi.com/mill/
-```
-
-Then just clone the repository and run `mill server.run`:
+To work on saxi, you can clone this repo and then run `npm start`:
 
 ```sh
 $ git clone https://github.com/nornagon/saxi
 $ cd saxi
-$ mill -i server.run
-# ...
-Server is listening on 0.0.0.0:9080
+$ npm start
 ```
 
-To watch changes to source files and re-build automatically:
-
-```sh
-$ mill -w server.runBackground
-```
+When you make a change, you'll need to re-run `npm start`
 
 ### Credits
 saxi's motion planning algorithm is heavily inspired by Michael Fogleman's
 [axi](https://github.com/fogleman/axi) project.
+
+saxi's UI would be an ugly mess if it weren't for @kylestetz's discerning eye.
 
 Thanks to [Evil Mad Scientist](http://www.evilmadscientist.com/) for designing
 and building such a lovely machine!
