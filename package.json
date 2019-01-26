@@ -5,11 +5,16 @@
   "homepage": "https://github.com/nornagon/saxi",
   "repository": "github:nornagon/saxi",
   "keywords": [
-    "axidraw", "plotter", "pen plotter", "eggbot", "serial", "hardware",
+    "axidraw",
+    "plotter",
+    "pen plotter",
+    "eggbot",
+    "serial",
+    "hardware",
     "robot"
   ],
   "bugs": {
-    "url" : "https://github.com/nornagon/saxi/issues"
+    "url": "https://github.com/nornagon/saxi/issues"
   },
   "main": "dist/server/server.js",
   "bin": {
