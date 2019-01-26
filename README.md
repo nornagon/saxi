@@ -5,6 +5,8 @@ saxi is a tool for interacting with the [AxiDraw
 drawing machine](https://axidraw.com/) by Evil Mad Scientist. It comes with an
 easy-to-use interface, and is exactingly precise.
 
+![a screenshot of the saxi user interface](docs/saxi.png)
+
 ### Usage
 
 ```
