@@ -5,6 +5,12 @@ saxi is a tool for interacting with the [AxiDraw
 drawing machine](https://axidraw.com/) by Evil Mad Scientist. It comes with an
 easy-to-use interface, and is exactingly precise.
 
+- automatically scales & centers your drawing to fit on the paper
+- minimizes pen-up travel time by reordering & reversing paths
+- uses a custom motion planning algorithm (inspired by [axi](https://github.com/fogleman/axi)) that's smooth & fast
+- has a web-based UI, so there's no need to muck around with installing X11 and Inkscape
+- can run on a Raspberry Pi or similar, so you don't need to be tethered to your plotter while it plots
+
 ![a screenshot of the saxi user interface](docs/saxi.png)
 
 ### Usage
