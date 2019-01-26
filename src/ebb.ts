@@ -17,8 +17,8 @@ export class EBB {
     return ports.filter((p) => p.manufacturer === "SchmalzHaus").map((p) => p.comName);
   }
 
-  private port: SerialPort;
-  private parser: SerialPort.parsers.Delimiter;
+  public port: SerialPort;
+  public parser: SerialPort.parsers.Delimiter;
   private commandQueue: Array<IterableIterator<any>>;
 
   private microsteppingMode: number = 0;

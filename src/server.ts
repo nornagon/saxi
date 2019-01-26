@@ -115,16 +115,15 @@ async function simulatePlot(plan: Plan): Promise<void> {
   }
 }
 
-async function connectEBB(path: string | undefined) {
+async function connectEBB(path: string | undefined): Promise<EBB | null> {
   if (path) {
-    ebb = new EBB(path);
+    return new EBB(path);
   } else {
     const ebbs = await EBB.list();
     if (ebbs.length) {
-      console.log(`Connecting to EBB on ${ebbs[0]}`);
-      ebb = new EBB(ebbs[0]);
+      return new EBB(ebbs[0]);
     } else {
-      console.log(`No EBBs found, simulation mode active`);
+      return null;
     }
   }
 }
@@ -141,11 +140,34 @@ const args = yargs.strict()
     describe: "device to connect to",
     type: "string"
   })
+  .option("firmware-version", {
+    describe: "print the device's firmware version and exit",
+    type: "boolean"
+  })
   .argv;
 
-server.listen(args.port, () => {
-  connectEBB(args.device);
-  const {family, address, port} = server.address() as any;
-  const addr = `${family === "IPv6" ? `[${address}]` : address}:${port}`;
-  console.log(`Server listening on http://${addr}`);
-});
+if (args["firmware-version"]) {
+  connectEBB(args.device).then(async (ebb) => {
+    if (!ebb) {
+      console.error(`No EBB connected`);
+      return process.exit(1);
+    }
+    const fwv = await ebb.firmwareVersion();
+    console.log(fwv);
+    await ebb.close()
+  });
+} else {
+  server.listen(args.port, () => {
+    connectEBB(args.device).then((d) => {
+      if (d) {
+        ebb = d;
+        console.log(`Connected to EBB on ${ebb.port.path}`);
+      } else {
+        console.log(`No EBBs found, simulation mode active`);
+      }
+    });
+    const {family, address, port} = server.address() as any;
+    const addr = `${family === "IPv6" ? `[${address}]` : address}:${port}`;
+    console.log(`Server listening on http://${addr}`);
+  });
+}
