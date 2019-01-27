@@ -154,7 +154,7 @@ if (args["firmware-version"]) {
     }
     const fwv = await ebb.firmwareVersion();
     console.log(fwv);
-    await ebb.close()
+    await ebb.close();
   });
 } else {
   server.listen(args.port, () => {

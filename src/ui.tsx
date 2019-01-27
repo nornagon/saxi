@@ -555,7 +555,11 @@ function Root({driver}: {driver: Driver}) {
 ReactDOM.render(<Root driver={Driver.connect()}/>, document.getElementById('app'))
 
 function readSvg(svgString: string): Vec2[][] {
-  return svgToPaths(svgString).map(ps => ps.map(([x, y]) => ({x, y})))
+  return svgToPaths(svgString).map(ps => {
+    const a =  ps.map(([x, y]: [number, number]) => ({x, y}));
+    (a as any).stroke = (ps as any).stroke;
+    return a
+  })
 }
 
 async function replan(paths: Vec2[][], {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight, resolution}: {paperSize: PaperSize, marginMm: number, selectedLayers: Set<string>, penUpHeight: number, penDownHeight: number, resolution: number}) {
