@@ -483,7 +483,7 @@ function Root({driver}: {driver: Driver}) {
     driver.onprogress = (motionIdx: number) => {
       dispatch({type: 'SET_PROGRESS', motionIdx})
     }
-    driver.oncancelled = () => {
+    driver.oncancelled = driver.onfinished = () => {
       dispatch({type: 'SET_PROGRESS', motionIdx: null})
     }
     const ondrop = (e: DragEvent) => {
