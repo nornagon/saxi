@@ -97,11 +97,10 @@ async function doPlot(plan: Plan): Promise<void> {
 }
 
 async function simulatePlot(plan: Plan): Promise<void> {
-  // simulate
   cancelRequested = false;
   let i = 0;
   for (const motion of plan.motions) {
-    console.log(`Motion ${i}/${plan.motions.length}`);
+    console.log(`Motion ${i + 1}/${plan.motions.length}`);
     broadcast({c: "progress", p: {motionIdx: i}});
     await new Promise((resolve) => setTimeout(resolve, motion.duration() * 1000));
     if (cancelRequested) { break; }
