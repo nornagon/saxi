@@ -30,7 +30,7 @@ export class EBB {
 
   constructor(path: string) {
     this.port = new SerialPort(path);
-    this.parser = this.port.pipe(new SerialPort.parsers.Delimiter({ delimiter: "\r\n" }));
+    this.parser = this.port.pipe(new SerialPort.parsers.Regex({ regex: /[\r\n]+/ }));
     this.commandQueue = [];
     this.parser.on("data", (chunk: Buffer) => {
       if (this.commandQueue.length) {
