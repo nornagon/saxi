@@ -584,7 +584,11 @@ async function replan(paths: Vec2[][], {paperSize, marginMm, selectedLayers, pen
   const inSteps = optimized.map(ps => ps.map(p => vmul(p, stepsPerMm)))
 
   // And finally, motion planning.
-  const plan = Planning.plan(inSteps, AxidrawFast)
+  const plan = Planning.plan(inSteps, {
+    ...AxidrawFast,
+    penUpPos: Device.Axidraw.penPctToPos(penUpHeight),
+    penDownPos: Device.Axidraw.penPctToPos(penDownHeight),
+  })
 
   return plan
 }
