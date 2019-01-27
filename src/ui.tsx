@@ -85,7 +85,11 @@ class Driver {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(plan.serialize()),
-    }).then(res => res.json()).then(data => console.log(data))
+    })
+  }
+
+  cancel() {
+    fetch('/cancel', { method: 'POST' })
   }
 
   send(msg: object) {
@@ -410,10 +414,7 @@ function LayerSelector({state}: {state: State}) {
 function PlotButtons({state, driver}: {state: State, driver: Driver}) {
   const dispatch = useContext(DispatchContext)
   function cancel() {
-    // TODO: move to Driver.scala
-    fetch('/cancel', {
-      method: 'POST',
-    }).then(res => res.json()).then(data => console.log(data))
+    driver.cancel()
   }
   function plot(plan: Plan) {
     driver.plot(plan)
