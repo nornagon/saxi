@@ -19,7 +19,7 @@ const args = require('yargs')
 const newVersion = semver.inc(package.version, args.level)
 
 const newPackageJson = {...package, version: newVersion}
-fs.writeFileSync(packageJsonPath, JSON.stringify(newPackageJson, null, 2))
+fs.writeFileSync(packageJsonPath, JSON.stringify(newPackageJson, null, 2) + "\n")
 
 function git(args) {
   const r = child_process.spawnSync("git", args, {cwd: repositoryRoot})
