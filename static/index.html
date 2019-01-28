@@ -23,7 +23,7 @@
         background-color: #f6f6f6;
       }
 
-      body, html {
+      body, html, #app {
         height: 100%;
         margin: 0;
       }
@@ -42,7 +42,7 @@
         font-weight: 900;
       }
 
-      #app {
+      .root {
         display: flex;
         align-items: stretch;
         height: 100%;
@@ -137,6 +137,9 @@
         font-weight: 900;
         text-align: center;
         user-select: none;
+      }
+      .disconnected .saxi-title {
+        text-decoration-line: line-through;
       }
 
       .section-header {
@@ -325,6 +328,11 @@
       .flex {
         display: flex;
         justify-content: space-between;
+      }
+
+      .info-disconnected {
+        text-align: center;
+        color: var(--red);
       }
 
     </style>

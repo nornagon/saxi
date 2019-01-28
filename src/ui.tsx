@@ -12,6 +12,7 @@ import {useThunkReducer} from './thunk-reducer'
 import {svgToPaths} from './svg-to-paths'
 
 const initialState = {
+  connected: true,
   penUpHeight: 50,
   penDownHeight: 60,
   resolution: 0,
@@ -63,6 +64,8 @@ function reducer(state: State, action: any): State {
     return {...state, selectedLayers: action.selectedLayers}
   case 'SET_PROGRESS':
     return {...state, progress: action.motionIdx}
+  case 'SET_CONNECTED':
+    return {...state, connected: action.connected}
   default:
     console.warn(`Unrecognized action type '${action.type}'`)
     return state
@@ -73,11 +76,56 @@ class Driver {
   onprogress: (motionIdx: number) => void | null;
   oncancelled: () => void | null;
   onfinished: () => void | null;
+  onconnectionchange: (connected: boolean) => void | null;
 
   private socket: WebSocket;
+  private connected: boolean;
+  private pingInterval: number;
 
-  constructor(ws: WebSocket) {
-    this.socket = ws;
+  constructor() {
+  }
+
+  connect() {
+    this.socket = new WebSocket(`ws://${document.location.host}/chat`)
+    this.socket.addEventListener("open", (e: Event) => {
+      console.log(`Connected to EBB server.`)
+      this.connected = true;
+      if (this.onconnectionchange) this.onconnectionchange(true);
+      this.pingInterval = window.setInterval(() => this.ping(), 30000)
+    })
+    this.socket.addEventListener("message", (e: MessageEvent) => {
+      if (typeof e.data === 'string') {
+        const msg = JSON.parse(e.data)
+        switch (msg.c) {
+          case 'pong': {
+          }; break;
+          case 'progress': {
+            if (this.onprogress != null) this.onprogress(msg.p.motionIdx)
+          }; break;
+          case 'cancelled': {
+            if (this.oncancelled != null) this.oncancelled()
+          }; break;
+          case 'finished': {
+            if (this.onfinished != null) this.onfinished()
+          }; break;
+          default: {
+            console.log('Unknown message from server:', msg)
+          }; break;
+        }
+      }
+    })
+    this.socket.addEventListener("error", (e: ErrorEvent) => {
+      // TODO: something
+    })
+    this.socket.addEventListener("close", (e: CloseEvent) => {
+      console.log(`Disconnected from EBB server, reconnecting in 5 seconds.`)
+      window.clearInterval(this.pingInterval)
+      this.pingInterval = null;
+      this.connected = false;
+      if (this.onconnectionchange) this.onconnectionchange(false);
+      this.socket = null;
+      setTimeout(() => this.connect(), 5000);
+    })
   }
 
   plot(plan: Plan) {
@@ -93,6 +141,9 @@ class Driver {
   }
 
   send(msg: object) {
+    if (!this.connected) {
+      throw new Error(`Can't send message: not connected`)
+    }
     this.socket.send(JSON.stringify(msg))
   }
 
@@ -104,35 +155,8 @@ class Driver {
   ping() { this.send({ c: 'ping' }) }
 
   static connect(): Driver {
-    const ws = new WebSocket(`ws://${document.location.host}/chat`)
-    const d = new Driver(ws)
-    ws.binaryType = "arraybuffer"
-    ws.addEventListener("message", (e: MessageEvent) => {
-      if (typeof e.data === 'string') {
-        const msg = JSON.parse(e.data)
-        switch (msg.c) {
-          case 'pong': {
-
-          }; break;
-          case 'progress': {
-            if (d.onprogress != null) d.onprogress(msg.p.motionIdx)
-          }; break;
-          case 'cancelled': {
-            if (d.oncancelled != null) d.oncancelled()
-          }; break;
-          case 'finished': {
-            if (d.onfinished != null) d.onfinished()
-          }; break;
-          default: {
-            console.log('Unknown message from server:', msg)
-          }; break;
-        }
-      }
-    })
-    ws.addEventListener("error", (e: ErrorEvent) => {
-      // TODO: something
-    })
-    setInterval(() => d.ping(), 30000)
+    const d = new Driver
+    d.connect()
     return d
   }
 }
@@ -486,6 +510,9 @@ function Root({driver}: {driver: Driver}) {
     driver.oncancelled = driver.onfinished = () => {
       dispatch({type: 'SET_PROGRESS', motionIdx: null})
     }
+    driver.onconnectionchange = (connected: boolean) => {
+      dispatch({type: 'SET_CONNECTED', connected})
+    }
     const ondrop = (e: DragEvent) => {
       e.preventDefault()
       const item = e.dataTransfer.items[0]
@@ -523,33 +550,36 @@ function Root({driver}: {driver: Driver}) {
   const previewArea = useRef(null)
   const previewSize = useComponentSize(previewArea)
   return <DispatchContext.Provider value={dispatch}>
-    <div className="control-panel">
-      <div className="saxi-title red">
-        <span className="red reg">s</span><span className="teal">axi</span>
-      </div>
-      <div className="section-header">pen</div>
-      <div className="section-body">
-        <PenHeight state={state} driver={driver} />
-        <MotorControl driver={driver} />
-      </div>
-      <div className="section-header">paper</div>
-      <div className="section-body">
-        <PaperConfig state={state} />
-        <PlanOptions state={state} />
-        <LayerSelector state={state} />
-      </div>
-      <div className="spacer" />
-      <div className="control-panel-bottom">
-        <div className="section-header">plot</div>
-        <div className="section-body section-body__plot">
-          <PlanStatistics plan={state.plan} />
-          <PlotButtons state={state} driver={driver} />
+    <div className={`root ${state.connected ? "connected" : "disconnected"}`}>
+      <div className="control-panel">
+        <div className={`saxi-title red`}>
+          <span className="red reg">s</span><span className="teal">axi</span>
+        </div>
+        {!state.connected ? <div className="info-disconnected">disconnected</div> : null}
+        <div className="section-header">pen</div>
+        <div className="section-body">
+          <PenHeight state={state} driver={driver} />
+          <MotorControl driver={driver} />
+        </div>
+        <div className="section-header">paper</div>
+        <div className="section-body">
+          <PaperConfig state={state} />
+          <PlanOptions state={state} />
+          <LayerSelector state={state} />
+        </div>
+        <div className="spacer" />
+        <div className="control-panel-bottom">
+          <div className="section-header">plot</div>
+          <div className="section-body section-body__plot">
+            <PlanStatistics plan={state.plan} />
+            <PlotButtons state={state} driver={driver} />
+          </div>
         </div>
       </div>
-    </div>
-    <div className="preview-area" ref={previewArea}>
-      <PlanPreview state={state} previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}} />
-      {state.paths ? null : <DragTarget/>}
+      <div className="preview-area" ref={previewArea}>
+        <PlanPreview state={state} previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}} />
+        {state.paths ? null : <DragTarget/>}
+      </div>
     </div>
   </DispatchContext.Provider>
 }
