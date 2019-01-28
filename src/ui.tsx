@@ -564,9 +564,14 @@ function Root({driver}: {driver: Driver}) {
         <div className="section-header">paper</div>
         <div className="section-body">
           <PaperConfig state={state} />
-          <PlanOptions state={state} />
           <LayerSelector state={state} />
         </div>
+        <details>
+          <summary className="section-header">more</summary>
+          <div className="section-body">
+            <PlanOptions state={state} />
+          </div>
+        </details>
         <div className="spacer" />
         <div className="control-panel-bottom">
           <div className="section-header">plot</div>
