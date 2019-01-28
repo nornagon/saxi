@@ -549,8 +549,17 @@ function Root({driver}: {driver: Driver}) {
     </div>
     <div className="preview-area" ref={previewArea}>
       <PlanPreview state={state} previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}} />
+      {state.paths ? null : <DragTarget/>}
     </div>
   </DispatchContext.Provider>
+}
+
+function DragTarget() {
+  return <div className="drag-target">
+    <div className="drag-target-message">
+      Drag SVG here
+    </div>
+  </div>
 }
 
 ReactDOM.render(<Root driver={Driver.connect()}/>, document.getElementById('app'))

@@ -79,6 +79,35 @@
         left: 0;
       }
 
+      .dragover .drag-target {
+        opacity: 0;
+      }
+
+      .drag-target {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.2);
+      }
+
+      .drag-target-message {
+        width: 50%;
+        height: 50%;
+        border: 8px dashed grey;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: whitesmoke;
+        background: rgba(255,255,255,0.25);
+        font-weight: bold;
+        font-size: 60px;
+      }
+
       .control-panel {
         position: relative;
         flex: 0 0 var(--panel-width);
