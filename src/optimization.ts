@@ -16,7 +16,7 @@ function dropWhile<T>(a: T[], f: (t: T) => boolean): T[] {
  * @param tolerance When the endpoints of adjacent paths are closer than this, they will be joined into one path.
  * @return The optimized path list.
  */
-function joinNearby(pointLists: Vec2[][], tolerance: number = 0.5): Vec2[][] {
+export function joinNearby(pointLists: Vec2[][], tolerance: number = 0.5): Vec2[][] {
   const tol2 = tolerance * tolerance
   function maybeJoin(a: Vec2[], b: Vec2[]): Vec2[][] {
     if (vlen2(vsub(a[a.length - 1], b[0])) <= tol2)
@@ -82,5 +82,5 @@ export function optimize(pointLists: Vec2[][]): Vec2[][] {
     )
     firstIdx = nextIdx
   }
-  return joinNearby(sortedPointLists)
+  return sortedPointLists
 }

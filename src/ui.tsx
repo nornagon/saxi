@@ -11,23 +11,27 @@ import {formatDuration, scaleToPaper, dedupPoints} from './util';
 import {useThunkReducer} from './thunk-reducer'
 import {svgToPaths} from './svg-to-paths'
 
+type PlanOptions = {
+  paperSize: PaperSize;
+  marginMm: number;
+  selectedLayers: Set<string>;
+  penUpHeight: number;
+  penDownHeight: number;
+  pointJoinRadius: number;
+  pathJoinRadius: number;
+};
+
 const initialState = {
   connected: true,
   penUpHeight: 50,
   penDownHeight: 60,
-  resolution: 0,
+  pointJoinRadius: 0,
+  pathJoinRadius: 0.5,
   paperSize: PaperSize.standard.ArchA.landscape,
   landscape: true,
   marginMm: 20,
   plan: null as Plan | null,
-  plannedOptions: null as {
-    penUpHeight: number,
-    penDownHeight: number,
-    resolution: number,
-    marginMm: number,
-    paperSize: PaperSize,
-    selectedLayers: Set<string>,
-  } | null,
+  plannedOptions: null as PlanOptions | null,
   paths: null as Vec2[][] | null,
   layers: [] as string[],
   selectedLayers: (new Set()) as Set<string>,
@@ -44,8 +48,10 @@ function reducer(state: State, action: any): State {
     return {...state, penUpHeight: action.value}
   case 'SET_PEN_DOWN_HEIGHT':
     return {...state, penDownHeight: action.value}
-  case 'SET_RESOLUTION':
-    return {...state, resolution: action.value}
+  case 'SET_POINT_JOIN_RADIUS':
+    return {...state, pointJoinRadius: action.value}
+  case 'SET_PATH_JOIN_RADIUS':
+    return {...state, pathJoinRadius: action.value}
   case 'SET_PAPER_SIZE':
     const landscape = action.size.size.x === action.size.landscape.size.x
       && action.size.size.y === action.size.landscape.size.y
@@ -169,7 +175,8 @@ const doReplan = () => async (dispatch: (a: any) => void, getState: () => State)
     selectedLayers: state.selectedLayers,
     penUpHeight: state.penUpHeight,
     penDownHeight: state.penDownHeight,
-    resolution: state.resolution,
+    pointJoinRadius: state.pointJoinRadius,
+    pathJoinRadius: state.pathJoinRadius
   }
   const plan = await replan(state.paths, planOptions)
   dispatch({type: 'SET_PLAN', plan, planOptions})
@@ -455,7 +462,8 @@ function PlotButtons({state, driver}: {state: State, driver: Driver}) {
   const needsReplan = state.plan != null && (
     state.plannedOptions.penUpHeight !== state.penUpHeight ||
     state.plannedOptions.penDownHeight !== state.penDownHeight ||
-    state.plannedOptions.resolution !== state.resolution ||
+    state.plannedOptions.pointJoinRadius !== state.pointJoinRadius ||
+    state.plannedOptions.pathJoinRadius !== state.pathJoinRadius ||
     state.plannedOptions.marginMm !== state.marginMm ||
     state.plannedOptions.paperSize.size.x !== state.paperSize.size.x ||
     state.plannedOptions.paperSize.size.y !== state.paperSize.size.y ||
@@ -492,9 +500,20 @@ function PlanOptions({state}: {state: State}) {
         point-joining radius (mm)
         <input
           type="number"
-          value={state.resolution}
+          value={state.pointJoinRadius}
           step="0.1"
-          onChange={e => dispatch({type: 'SET_RESOLUTION', value: Number(e.target.value)})}
+          min="0"
+          onChange={e => dispatch({type: 'SET_POINT_JOIN_RADIUS', value: Number(e.target.value)})}
+        />
+      </label>
+      <label>
+        path-joining radius (mm)
+        <input
+          type="number"
+          value={state.pathJoinRadius}
+          step="0.1"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PATH_JOIN_RADIUS', value: Number(e.target.value)})}
         />
       </label>
     </div>
@@ -607,7 +626,8 @@ function readSvg(svgString: string): Vec2[][] {
   })
 }
 
-async function replan(paths: Vec2[][], {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight, resolution}: {paperSize: PaperSize, marginMm: number, selectedLayers: Set<string>, penUpHeight: number, penDownHeight: number, resolution: number}) {
+async function replan(paths: Vec2[][], planOptions: PlanOptions) {
+  const {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight, pointJoinRadius} = planOptions;
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
   const scaledToPaper: Vec2[][] = scaleToPaper(paths, paperSize, marginMm)
@@ -618,10 +638,13 @@ async function replan(paths: Vec2[][], {paperSize, marginMm, selectedLayers, pen
   const scaledToPaperSelected = scaledToPaper.filter((path, i) =>
     selectedLayers.has((paths[i] as any).stroke))
 
-  const deduped: Vec2[][] = resolution === 0 ? scaledToPaperSelected : scaledToPaperSelected.map(p => dedupPoints(p, resolution))
+  const deduped: Vec2[][] = pointJoinRadius === 0 ? scaledToPaperSelected : scaledToPaperSelected.map(p => dedupPoints(p, pointJoinRadius))
 
   // Optimize based on just the selected layers.
-  const optimized: Vec2[][] = Optimization.optimize(deduped)
+  const optimized: Vec2[][] = Optimization.joinNearby(
+    Optimization.optimize(deduped),
+    planOptions.pathJoinRadius
+  )
 
   // Convert the paths to units of "steps".
   const {stepsPerMm} = Device.Axidraw
