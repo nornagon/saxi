@@ -478,16 +478,16 @@ function PlotButtons({state, driver}: {state: State, driver: Driver}) {
             Replan
         </button>
         : <button
-          className={`plot-button ${state.progress ? 'plot-button--plotting' : ''}`}
+          className={`plot-button ${state.progress != null ? 'plot-button--plotting' : ''}`}
           disabled={state.plan == null || state.progress != null}
           onClick={() => plot(state.plan)}>
             {state.plan && state.progress ? 'Plotting...' : 'Plot'}
         </button>
     }
     <button
-      className={`cancel-button ${state.progress ? 'cancel-button--active' : ''}`}
+      className={`cancel-button ${state.progress != null ? 'cancel-button--active' : ''}`}
       onClick={cancel}
-      disabled={state.plan == null || !state.progress}
+      disabled={state.plan == null || state.progress == null}
     >Cancel</button>
   </div>
 }
