@@ -1,3 +1,4 @@
+import './path-data-polyfill.exec.js';
 import React, { useState, useRef, useEffect, useMemo, useContext, useLayoutEffect, Fragment, ChangeEvent } from 'react';
 import ReactDOM from 'react-dom';
 import useComponentSize from '@rehooks/component-size';
@@ -78,6 +79,10 @@ function reducer(state: State, action: any): State {
   }
 }
 
+const host = document.location.search.indexOf('=') >= 0
+  ? `${document.location.hostname}:${document.location.search.split('=')[1]}`
+  : `${document.location.host}`
+
 class Driver {
   onprogress: (motionIdx: number) => void | null;
   oncancelled: () => void | null;
@@ -92,7 +97,7 @@ class Driver {
   }
 
   connect() {
-    this.socket = new WebSocket(`ws://${document.location.host}/chat`)
+    this.socket = new WebSocket(`ws://${host}`)
     this.socket.addEventListener("open", (e: Event) => {
       console.log(`Connected to EBB server.`)
       this.connected = true;
@@ -135,7 +140,7 @@ class Driver {
   }
 
   plot(plan: Plan) {
-    fetch('/plot', {
+    fetch(`//${host}/plot`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(plan.serialize()),
@@ -143,7 +148,7 @@ class Driver {
   }
 
   cancel() {
-    fetch('/cancel', { method: 'POST' })
+    fetch(`//${host}/cancel`, { method: 'POST' })
   }
 
   send(msg: object) {

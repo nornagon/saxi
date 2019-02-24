@@ -16,26 +16,81 @@
   "bugs": {
     "url": "https://github.com/nornagon/saxi/issues"
   },
-  "main": "dist/server/server.js",
+  "main": ".webpack/main",
   "bin": {
     "saxi": "dist/server/server.js"
   },
   "scripts": {
     "prebuild": "tslint -c tslint.json -p tsconfig.json --fix -t verbose",
-    "build": "tsc && webpack --mode=production",
+    "app:make": "electron-forge make",
+    "app:package": "electron-forge package",
+    "app:publish": "electron-forge publish",
+    "app:start": "electron-forge start",
+    "build": "tsc && webpack --mode=production --config=webpack.web.config.js",
     "prepare": "npm run build",
     "prestart": "npm run build",
     "start": "node .",
-    "dev": "tsc && webpack --mode=development -w & node .",
+    "dev": "tsc && webpack --mode=development --config=webpack.web.config.js -w & node .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Jeremy Apthorp <nornagon@nornagon.net>",
   "license": "AGPL-3.0-only",
+  "config": {
+    "forge": {
+      "packagerConfig": {},
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "my_app"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        },
+        {
+          "name": "@electron-forge/maker-rpm",
+          "config": {}
+        }
+      ],
+      "plugins": [
+        [
+          "@electron-forge/plugin-webpack",
+          {
+            "mainConfig": "./webpack.main.config.js",
+            "renderer": {
+              "config": "./webpack.renderer.config.js",
+              "entryPoints": [
+                {
+                  "html": "./src/index.html",
+                  "js": "./src/ui.tsx",
+                  "name": "main_window"
+                }
+              ]
+            }
+          }
+        ]
+      ]
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.1.6",
     "@babel/polyfill": "^7.0.0",
     "@babel/preset-env": "^7.1.6",
     "@babel/preset-react": "^7.0.0",
+    "@electron-forge/cli": "^6.0.0-beta.32",
+    "@electron-forge/maker-deb": "^6.0.0-beta.32",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.32",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.32",
+    "@electron-forge/maker-zip": "^6.0.0-beta.32",
+    "@electron-forge/plugin-webpack": "^6.0.0-beta.32",
     "@rehooks/component-size": "^1.0.2",
     "@types/express": "^4.16.1",
     "@types/node": "^10.12.18",
@@ -45,12 +100,15 @@
     "@types/ws": "^6.0.1",
     "@types/yargs": "^12.0.8",
     "babel-eslint": "^10.0.1",
-    "babel-loader": "^8.0.4",
+    "babel-loader": "^8.0.5",
     "css-loader": "^2.1.0",
+    "electron": "4.0.5",
     "eslint": "^5.12.0",
     "eslint-plugin-react": "^7.12.4",
+    "html-webpack-plugin": "^3.2.0",
     "react": "^16.8.0-alpha.1",
     "react-dom": "^16.8.0-alpha.1",
+    "script-loader": "^0.7.2",
     "semver": "^5.6.0",
     "style-loader": "^0.23.1",
     "ts-loader": "^5.3.3",
@@ -61,8 +119,9 @@
     "webpack-dev": "^1.1.1"
   },
   "dependencies": {
+    "electron-squirrel-startup": "^1.0.0",
     "express": "^4.16.4",
-    "serialport": "^7.1.3",
+    "serialport": "^7.1.4",
     "ws": "^6.1.3",
     "yargs": "^12.0.5"
   },

@@ -16,7 +16,6 @@
     }
   },
   "files": [
-    "src/server.ts",
-    "src/index.ts"
+    "src/cli.ts"
   ]
 }
