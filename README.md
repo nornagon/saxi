@@ -48,18 +48,6 @@ EBBv13_and_above EB Firmware Version 2.5.3
 
 To upgrade your AxiDraw's firmware, see [here](https://github.com/evil-mad/EggBot/tree/master/EBB_firmware).
 
-### TODO
-
-- Expose more tooling profile parameters as configuration options in the UI
-  - pen linger time
-  - max-vel, acceleration and cornering factor
-- Command-line usage
-  - plot
-  - info
-  - limp
-  - jogging
-  - set pen height
-
 ### Developing
 
 To work on saxi, you can clone this repo and then run `npm start`:
@@ -67,10 +55,10 @@ To work on saxi, you can clone this repo and then run `npm start`:
 ```sh
 $ git clone https://github.com/nornagon/saxi
 $ cd saxi
-$ npm start
+$ npm run dev
 ```
 
-When you make a change, you'll need to re-run `npm start`
+This will watch local files for changes. If you change the server code, you'll need to restart manually.
 
 ### Credits
 saxi's motion planning algorithm is heavily inspired by Michael Fogleman's
