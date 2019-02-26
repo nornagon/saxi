@@ -16,9 +16,9 @@
   "bugs": {
     "url": "https://github.com/nornagon/saxi/issues"
   },
-  "main": "dist/server/server.js",
+  "main": "index.js",
   "bin": {
-    "saxi": "dist/server/server.js"
+    "saxi": "index.js"
   },
   "scripts": {
     "prebuild": "tslint -c tslint.json -p tsconfig.json --fix -t verbose",
