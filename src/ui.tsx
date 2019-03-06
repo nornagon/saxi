@@ -44,6 +44,7 @@ const planOptionsEqual = (a: PlanOptions, b: PlanOptions): boolean => {
 const initialState = {
   connected: true,
 
+  // UI state
   planOptions: {
     penUpHeight: 50,
     penDownHeight: 60,
@@ -54,11 +55,17 @@ const initialState = {
     selectedLayers: (new Set()) as Set<string>,
   } as PlanOptions,
 
-  landscape: true,
-  plan: null as Plan | null,
+  // Options used to produce the current value of |plan|.
   plannedOptions: null as PlanOptions | null,
+
+  // Info about the currently-loaded SVG.
   paths: null as Vec2[][] | null,
   layers: [] as string[],
+
+  // The plan that will be sent to the plotter when 'Plot' is clicked.
+  plan: null as Plan | null,
+
+  // While a plot is in progress, this will be the index of the current motion.
   progress: (null as number | null),
 }
 
@@ -77,12 +84,10 @@ function reducer(state: State, action: any): State {
   case 'SET_PATH_JOIN_RADIUS':
     return {...state, planOptions: {...state.planOptions, pathJoinRadius: action.value}}
   case 'SET_PAPER_SIZE':
-    const landscape = action.size.size.x === action.size.landscape.size.x
-      && action.size.size.y === action.size.landscape.size.y
-    return {...state, planOptions: {...state.planOptions, paperSize: action.size}, landscape}
+    return {...state, planOptions: {...state.planOptions, paperSize: action.size}}
   case 'SET_LANDSCAPE':
     const paperSize = state.planOptions.paperSize[action.value ? 'landscape' : 'portrait']
-    return {...state, landscape: action.value, planOptions: {...state.planOptions, paperSize}}
+    return {...state, planOptions: {...state.planOptions, paperSize}}
   case 'SET_MARGIN':
     return {...state, planOptions: {...state.planOptions, marginMm: action.value}}
   case 'SET_PATHS':
@@ -260,10 +265,11 @@ function SwapPaperSizesButton({ onClick }: { onClick: () => void }) {
 
 function PaperConfig({state}: {state: State}) {
   const dispatch = useContext(DispatchContext)
+  const landscape = state.planOptions.paperSize.isLandscape
   function setPaperSize(e: ChangeEvent) {
     const name = (e.target as HTMLInputElement).value
     if (name !== 'Custom') {
-      const ps = PaperSize.standard[name][state.landscape ? 'landscape' : 'portrait']
+      const ps = PaperSize.standard[name][landscape ? 'landscape' : 'portrait']
       dispatch({type: 'SET_PAPER_SIZE', size: ps})
     }
   }
@@ -295,7 +301,7 @@ function PaperConfig({state}: {state: State}) {
           onChange={e => setCustomPaperSize(Number(e.target.value), paperSize.size.y)}
         />
       </label>
-      <SwapPaperSizesButton onClick={() => dispatch({type: 'SET_LANDSCAPE', value: !state.landscape})} />
+      <SwapPaperSizesButton onClick={() => dispatch({type: 'SET_LANDSCAPE', value: !landscape})} />
       <label className="paper-label">
         height (mm)
         <input

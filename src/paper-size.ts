@@ -20,6 +20,10 @@ export class PaperSize {
     });
   }
 
+  get isLandscape(): boolean {
+    return this.size.x === Math.max(this.size.x, this.size.y);
+  }
+
   public static standard: {[name: string]: PaperSize} = {
     "USLetter": new PaperSize(vround(vmul({x: 8.5, y: 11}, 25.4))),
     "USLegal": new PaperSize(vround(vmul({x: 8.5, y: 14}, 25.4))),
