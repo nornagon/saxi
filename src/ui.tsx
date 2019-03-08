@@ -26,6 +26,16 @@ type PlanOptions = {
   penDownHeight: number;
   pointJoinRadius: number;
   pathJoinRadius: number;
+
+  penDownAcceleration: number;
+  penDownMaxVelocity: number;
+  penDownCorneringFactor: number;
+
+  penUpAcceleration: number;
+  penUpMaxVelocity: number;
+
+  penDropDuration: number;
+  penLiftDuration: number;
 };
 
 const planOptionsEqual = (a: PlanOptions, b: PlanOptions): boolean => {
@@ -36,16 +46,13 @@ const planOptionsEqual = (a: PlanOptions, b: PlanOptions): boolean => {
         return false
     return true
   }
-  return !(
-    a.penUpHeight !== b.penUpHeight ||
-    a.penDownHeight !== b.penDownHeight ||
-    a.pointJoinRadius !== b.pointJoinRadius ||
-    a.pathJoinRadius !== b.pathJoinRadius ||
-    a.marginMm !== b.marginMm ||
-    a.paperSize.size.x !== b.paperSize.size.x ||
-    a.paperSize.size.y !== b.paperSize.size.y ||
-    !setEq(a.selectedLayers, b.selectedLayers)
-  )
+  return Object.keys(a).every(k => {
+    const av = (a as any)[k]
+    const bv = (b as any)[k]
+    if (av instanceof Set) return setEq(av, bv)
+    else if (av instanceof PaperSize) return av.size.x === bv.size.x && av.size.y === bv.size.y
+    else return av === bv
+  })
 }
 
 const initialState = {
@@ -60,6 +67,16 @@ const initialState = {
     paperSize: PaperSize.standard.ArchA.landscape,
     marginMm: 20,
     selectedLayers: (new Set()) as Set<string>,
+
+    penDownAcceleration: 200,
+    penDownMaxVelocity: 50,
+    penDownCorneringFactor: 0.127,
+
+    penUpAcceleration: 400,
+    penUpMaxVelocity: 200,
+
+    penDropDuration: 0.12,
+    penLiftDuration: 0.12,
   } as PlanOptions,
 
   // Options used to produce the current value of |plan|.
@@ -514,6 +531,78 @@ function PlanOptions({state}: {state: State}) {
         />
       </label>
     </div>
+    <div>
+      <label>
+        pen-down acceleration (mm/s<sup>2</sup>)
+        <input
+          type="number"
+          value={state.planOptions.penDownAcceleration}
+          step="0.1"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penDownAcceleration: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        pen-down max velocity (mm/s)
+        <input
+          type="number"
+          value={state.planOptions.penDownMaxVelocity}
+          step="0.1"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penDownMaxVelocity: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        cornering factor
+        <input
+          type="number"
+          value={state.planOptions.penDownCorneringFactor}
+          step="0.01"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penDownCorneringFactor: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        pen-up acceleration (mm/s<sup>2</sup>)
+        <input
+          type="number"
+          value={state.planOptions.penUpAcceleration}
+          step="0.1"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penUpAcceleration: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        pen-up max velocity (mm/s)
+        <input
+          type="number"
+          value={state.planOptions.penUpMaxVelocity}
+          step="0.1"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penUpMaxVelocity: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        pen lift duration (s)
+        <input
+          type="number"
+          value={state.planOptions.penLiftDuration}
+          step="0.1"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penLiftDuration: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        pen drop duration (s)
+        <input
+          type="number"
+          value={state.planOptions.penDropDuration}
+          step="0.1"
+          min="0"
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penDropDuration: Number(e.target.value)}})}
+        />
+      </label>
+    </div>
   </div>
 }
 
@@ -649,9 +738,20 @@ async function replan(paths: Vec2[][], planOptions: PlanOptions) {
 
   // And finally, motion planning.
   const plan = Planning.plan(inSteps, {
-    ...AxidrawFast,
     penUpPos: Device.Axidraw.penPctToPos(penUpHeight),
     penDownPos: Device.Axidraw.penPctToPos(penDownHeight),
+    penDownProfile: {
+      acceleration: planOptions.penDownAcceleration * Device.Axidraw.stepsPerMm,
+      maximumVelocity: planOptions.penDownMaxVelocity * Device.Axidraw.stepsPerMm,
+      corneringFactor: planOptions.penDownCorneringFactor * Device.Axidraw.stepsPerMm,
+    },
+    penUpProfile: {
+      acceleration: planOptions.penDownAcceleration * Device.Axidraw.stepsPerMm,
+      maximumVelocity: planOptions.penDownMaxVelocity * Device.Axidraw.stepsPerMm,
+      corneringFactor: 0,
+    },
+    penDropDuration: planOptions.penDropDuration,
+    penLiftDuration: planOptions.penLiftDuration,
   })
 
   return plan
