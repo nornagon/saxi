@@ -82,28 +82,13 @@ const DispatchContext = React.createContext(null)
 
 function reducer(state: State, action: any): State {
   switch (action.type) {
-  case 'SET_PEN_UP_HEIGHT':
-    return {...state, planOptions: {...state.planOptions, penUpHeight: action.value}}
-  case 'SET_PEN_DOWN_HEIGHT':
-    return {...state, planOptions: {...state.planOptions, penDownHeight: action.value}}
-  case 'SET_POINT_JOIN_RADIUS':
-    return {...state, planOptions: {...state.planOptions, pointJoinRadius: action.value}}
-  case 'SET_PATH_JOIN_RADIUS':
-    return {...state, planOptions: {...state.planOptions, pathJoinRadius: action.value}}
-  case 'SET_PAPER_SIZE':
-    return {...state, planOptions: {...state.planOptions, paperSize: action.size}}
-  case 'SET_LANDSCAPE':
-    const paperSize = state.planOptions.paperSize[action.value ? 'landscape' : 'portrait']
-    return {...state, planOptions: {...state.planOptions, paperSize}}
-  case 'SET_MARGIN':
-    return {...state, planOptions: {...state.planOptions, marginMm: action.value}}
+  case 'SET_PLAN_OPTION':
+    return {...state, planOptions: {...state.planOptions, ...action.value}}
   case 'SET_PATHS':
     const {paths, layers, selectedLayers} = action
     return {...state, plan: (null as Plan | null), paths, layers, planOptions: {...state.planOptions, selectedLayers}}
   case 'SET_PLAN':
     return {...state, plan: action.plan, plannedOptions: action.planOptions}
-  case 'SET_LAYERS':
-    return {...state, planOptions: {...state.planOptions, selectedLayers: action.selectedLayers}}
   case 'SET_PROGRESS':
     return {...state, progress: action.motionIdx}
   case 'SET_CONNECTED':
@@ -220,8 +205,8 @@ const setPaths = (paths: Vec2[][]) => (dispatch: (a: any) => void) => {
 function PenHeight({state, driver}: {state: State, driver: Driver}) {
   const {penUpHeight, penDownHeight} = state.planOptions
   const dispatch = useContext(DispatchContext)
-  const setPenUpHeight = (x: number) => dispatch({type: 'SET_PEN_UP_HEIGHT', value: x})
-  const setPenDownHeight = (x: number) => dispatch({type: 'SET_PEN_DOWN_HEIGHT', value: x})
+  const setPenUpHeight = (x: number) => dispatch({type: 'SET_PLAN_OPTION', value: {penUpHeight: x}})
+  const setPenDownHeight = (x: number) => dispatch({type: 'SET_PLAN_OPTION', value: {penDownHeight: x}})
   const penUp = () => {
     const height = Device.Axidraw.penPctToPos(penUpHeight)
     driver.setPenHeight(height, 1000)
@@ -277,11 +262,11 @@ function PaperConfig({state}: {state: State}) {
     const name = (e.target as HTMLInputElement).value
     if (name !== 'Custom') {
       const ps = PaperSize.standard[name][landscape ? 'landscape' : 'portrait']
-      dispatch({type: 'SET_PAPER_SIZE', size: ps})
+      dispatch({type: 'SET_PLAN_OPTION', value: {paperSize: ps}})
     }
   }
   function setCustomPaperSize(x: number, y: number) {
-    dispatch({type: 'SET_PAPER_SIZE', size: new PaperSize({x, y})})
+    dispatch({type: 'SET_PLAN_OPTION', value: {paperSize: new PaperSize({x, y})}})
   }
   const {paperSize} = state.planOptions
   const paperSizeName = Object.keys(PaperSize.standard).find(psName => {
@@ -308,7 +293,7 @@ function PaperConfig({state}: {state: State}) {
           onChange={e => setCustomPaperSize(Number(e.target.value), paperSize.size.y)}
         />
       </label>
-      <SwapPaperSizesButton onClick={() => dispatch({type: 'SET_LANDSCAPE', value: !landscape})} />
+      <SwapPaperSizesButton onClick={() => dispatch({type: 'SET_PLAN_OPTION', value: {paperSize: paperSize.isLandscape ? paperSize.portrait : paperSize.landscape}})} />
       <label className="paper-label">
         height (mm)
         <input
@@ -325,7 +310,7 @@ function PaperConfig({state}: {state: State}) {
         value={state.planOptions.marginMm}
         min="0"
         max={Math.min(paperSize.size.x/2, paperSize.size.y/2)}
-        onChange={e => dispatch({type: 'SET_MARGIN', value: Number(e.target.value)})}
+        onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {marginMm: Number(e.target.value)}})}
       />
     </label>
   </div>
@@ -453,7 +438,7 @@ function LayerSelector({state}: {state: State}) {
   if (state.layers.length <= 1) return null
   const layersChanged = (e: ChangeEvent) => {
     const selectedLayers = new Set([...(e.target as HTMLSelectElement).selectedOptions].map(o => o.value))
-    dispatch({type: 'SET_LAYERS', selectedLayers})
+    dispatch({type: 'SET_PLAN_OPTION', value: {selectedLayers}})
   }
   return <div>
     <label>
@@ -515,7 +500,7 @@ function PlanOptions({state}: {state: State}) {
           value={state.planOptions.pointJoinRadius}
           step="0.1"
           min="0"
-          onChange={e => dispatch({type: 'SET_POINT_JOIN_RADIUS', value: Number(e.target.value)})}
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {pointJoinRadius: Number(e.target.value)}})}
         />
       </label>
       <label title="path-joining radius (mm)">
@@ -525,7 +510,7 @@ function PlanOptions({state}: {state: State}) {
           value={state.planOptions.pathJoinRadius}
           step="0.1"
           min="0"
-          onChange={e => dispatch({type: 'SET_PATH_JOIN_RADIUS', value: Number(e.target.value)})}
+          onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {pathJoinRadius: Number(e.target.value)}})}
         />
       </label>
     </div>
