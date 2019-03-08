@@ -8,6 +8,7 @@
     "allowJs": true
   },
   "files": [
-    "src/ui.tsx"
+    "src/ui.tsx",
+    "src/global.d.ts"
   ]
 }

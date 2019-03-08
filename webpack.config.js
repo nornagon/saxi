@@ -31,6 +31,10 @@ module.exports = {
       {
         test: /\.exec\.js$/,
         use: ['script-loader'],
+      },
+      {
+        test: /\.svg$/,
+        use: ['file-loader'],
       }
     ]
   },

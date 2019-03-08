@@ -274,6 +274,17 @@
         cursor: pointer;
       }
 
+      .horizontal-labels label {
+        display: flex;
+      }
+      .horizontal-labels label > :first-child {
+        width: 32px;
+        flex: 0;
+      }
+      .horizontal-labels label > input {
+        flex: 1;
+      }
+
       /* PLOT section */
 
       .duration {

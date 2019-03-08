@@ -11,6 +11,11 @@ import {formatDuration, scaleToPaper, dedupPoints} from './util';
 import {useThunkReducer} from './thunk-reducer'
 import {svgToPaths} from './svg-to-paths'
 
+import './path-data-polyfill.exec'
+
+import pathJoinRadiusIcon from './icons/path-joining radius.svg';
+import pointJoinRadiusIcon from './icons/point-joining radius.svg';
+
 type PlanOptions = {
   paperSize: PaperSize;
   marginMm: number;
@@ -500,9 +505,9 @@ function PlotButtons({state, driver}: {state: State, driver: Driver}) {
 function PlanOptions({state}: {state: State}) {
   const dispatch = useContext(DispatchContext)
   return <div>
-    <div>
-      <label>
-        point-joining radius (mm)
+    <div className="horizontal-labels">
+      <label title="point-joining radius (mm)" >
+        <img src={pointJoinRadiusIcon} style={{height: 28}} alt="point-joining radius (mm)"/>
         <input
           type="number"
           value={state.planOptions.pointJoinRadius}
@@ -511,8 +516,8 @@ function PlanOptions({state}: {state: State}) {
           onChange={e => dispatch({type: 'SET_POINT_JOIN_RADIUS', value: Number(e.target.value)})}
         />
       </label>
-      <label>
-        path-joining radius (mm)
+      <label title="path-joining radius (mm)">
+        <img src={pathJoinRadiusIcon} style={{height: 28}} alt="path-joining radius (mm)" />
         <input
           type="number"
           value={state.planOptions.pathJoinRadius}
