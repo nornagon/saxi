@@ -46,7 +46,7 @@
     "@types/yargs": "^12.0.8",
     "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.4",
-    "css-loader": "^2.1.0",
+    "css-loader": "^2.1.1",
     "eslint": "^5.12.0",
     "eslint-plugin-react": "^7.12.4",
     "file-loader": "^3.0.1",
