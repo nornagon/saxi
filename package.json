@@ -4,6 +4,7 @@
   "description": "Drive the AxiDraw pen plotter",
   "homepage": "https://github.com/nornagon/saxi",
   "repository": "github:nornagon/saxi",
+  "bugs": "https://github.com/nornagon/saxi/issues",
   "keywords": [
     "axidraw",
     "plotter",
@@ -13,20 +14,15 @@
     "hardware",
     "robot"
   ],
-  "bugs": {
-    "url": "https://github.com/nornagon/saxi/issues"
-  },
   "main": "index.js",
-  "bin": {
-    "saxi": "index.js"
-  },
+  "bin": "cli.js",
   "scripts": {
     "prebuild": "tslint -c tslint.json -p tsconfig.json --fix -t verbose",
     "build": "tsc && webpack --mode=production",
     "prepare": "npm run build",
     "prestart": "npm run build",
-    "start": "node .",
-    "dev": "tsc && webpack --mode=development -w & node .",
+    "start": "node cli.js",
+    "dev": "tsc && webpack --mode=development -w & node cli.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Jeremy Apthorp <nornagon@nornagon.net>",

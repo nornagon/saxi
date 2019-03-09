@@ -1,2 +1,3 @@
-#!/usr/bin/env node
-require('./dist/server/cli').cli()
+module.exports = {
+  server: require('./dist/server/server'),
+}
