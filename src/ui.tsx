@@ -587,7 +587,7 @@ function PlanOptions({state}: {state: State}) {
         <input
           type="number"
           value={state.planOptions.penLiftDuration}
-          step="0.1"
+          step="0.01"
           min="0"
           onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penLiftDuration: Number(e.target.value)}})}
         />
@@ -597,7 +597,7 @@ function PlanOptions({state}: {state: State}) {
         <input
           type="number"
           value={state.planOptions.penDropDuration}
-          step="0.1"
+          step="0.01"
           min="0"
           onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {penDropDuration: Number(e.target.value)}})}
         />
