@@ -746,8 +746,8 @@ async function replan(paths: Vec2[][], planOptions: PlanOptions) {
       corneringFactor: planOptions.penDownCorneringFactor * Device.Axidraw.stepsPerMm,
     },
     penUpProfile: {
-      acceleration: planOptions.penDownAcceleration * Device.Axidraw.stepsPerMm,
-      maximumVelocity: planOptions.penDownMaxVelocity * Device.Axidraw.stepsPerMm,
+      acceleration: planOptions.penUpAcceleration * Device.Axidraw.stepsPerMm,
+      maximumVelocity: planOptions.penUpMaxVelocity * Device.Axidraw.stepsPerMm,
       corneringFactor: 0,
     },
     penDropDuration: planOptions.penDropDuration,
