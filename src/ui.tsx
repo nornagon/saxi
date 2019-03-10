@@ -36,6 +36,8 @@ type PlanOptions = {
 
   penDropDuration: number;
   penLiftDuration: number;
+
+  sortPaths: boolean;
 };
 
 const planOptionsEqual = (a: PlanOptions, b: PlanOptions): boolean => {
@@ -77,6 +79,8 @@ const initialState = {
 
     penDropDuration: 0.12,
     penLiftDuration: 0.12,
+
+    sortPaths: true,
   } as PlanOptions,
 
   // Options used to produce the current value of |plan|.
@@ -532,6 +536,16 @@ function PlanOptions({state}: {state: State}) {
       </label>
     </div>
     <div>
+      <div>
+        <label title="Re-order paths to minimize pen-up travel time">
+          <input
+            type="checkbox"
+            checked={state.planOptions.sortPaths}
+            onChange={e => dispatch({type: 'SET_PLAN_OPTION', value: {sortPaths: Number(e.target.checked)}})}
+          />
+          sort paths
+        </label>
+      </div>
       <label>
         pen-down acceleration (mm/s<sup>2</sup>)
         <input
@@ -727,7 +741,7 @@ async function replan(paths: Vec2[][], planOptions: PlanOptions) {
   const deduped: Vec2[][] = pointJoinRadius === 0 ? scaledToPaperSelected : scaledToPaperSelected.map(p => dedupPoints(p, pointJoinRadius))
 
   console.time("sorting paths")
-  const reordered = Optimization.optimize(deduped)
+  const reordered = planOptions.sortPaths ? Optimization.optimize(deduped) : deduped
   console.timeEnd("sorting paths")
 
   // Optimize based on just the selected layers.
