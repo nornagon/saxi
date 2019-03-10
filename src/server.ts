@@ -38,6 +38,8 @@ export function startServer(port: number, device: string | null = null) {
       }
     });
 
+    ws.send(JSON.stringify({c: "dev", p: {path: ebb.port.path}}));
+
     ws.on("close", () => {
       clients = clients.filter((w) => w !== ws);
     });

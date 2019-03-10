@@ -60,6 +60,8 @@ const planOptionsEqual = (a: PlanOptions, b: PlanOptions): boolean => {
 const initialState = {
   connected: true,
 
+  deviceInfo: null as DeviceInfo | null,
+
   // UI state
   planOptions: {
     penUpHeight: 50,
@@ -105,6 +107,8 @@ function reducer(state: State, action: any): State {
   switch (action.type) {
   case 'SET_PLAN_OPTION':
     return {...state, planOptions: {...state.planOptions, ...action.value}}
+  case 'SET_DEVICE_INFO':
+    return {...state, deviceInfo: action.value}
   case 'SET_PATHS':
     const {paths, layers, selectedLayers} = action
     return {...state, plan: (null as Plan | null), paths, layers, planOptions: {...state.planOptions, selectedLayers}}
@@ -120,10 +124,15 @@ function reducer(state: State, action: any): State {
   }
 }
 
+type DeviceInfo = {
+  path: string;
+}
+
 class Driver {
   onprogress: (motionIdx: number) => void | null;
   oncancelled: () => void | null;
   onfinished: () => void | null;
+  ondevinfo: (devInfo: DeviceInfo) => void | null;
   onconnectionchange: (connected: boolean) => void | null;
 
   private socket: WebSocket;
@@ -156,6 +165,9 @@ class Driver {
           case 'finished': {
             if (this.onfinished != null) this.onfinished()
           }; break;
+          case 'dev': {
+            if (this.ondevinfo != null) this.ondevinfo(msg.p)
+          }
           default: {
             console.log('Unknown message from server:', msg)
           }; break;
@@ -637,6 +649,9 @@ function Root({driver}: {driver: Driver}) {
     driver.onconnectionchange = (connected: boolean) => {
       dispatch({type: 'SET_CONNECTED', connected})
     }
+    driver.ondevinfo = (devInfo: DeviceInfo) => {
+      dispatch({type: 'SET_DEVICE_INFO', value: devInfo})
+    }
     const ondrop = (e: DragEvent) => {
       e.preventDefault()
       const item = e.dataTransfer.items[0]
@@ -676,7 +691,7 @@ function Root({driver}: {driver: Driver}) {
   return <DispatchContext.Provider value={dispatch}>
     <div className={`root ${state.connected ? "connected" : "disconnected"}`}>
       <div className="control-panel">
-        <div className={`saxi-title red`}>
+        <div className={`saxi-title red`} title={state.deviceInfo ? state.deviceInfo.path : null}>
           <span className="red reg">s</span><span className="teal">axi</span>
         </div>
         {!state.connected ? <div className="info-disconnected">disconnected</div> : null}
