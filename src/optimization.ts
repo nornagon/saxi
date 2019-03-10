@@ -32,27 +32,6 @@ export function joinNearby(pointLists: Vec2[][], tolerance: number = 0.5): Vec2[
   return pointLists.reduce(appendAndJoin, [])
 }
 
-function until(a: number, b: number) {
-  const r = []
-  for (let i = a; i < b; i++) {
-    r.push(i)
-  }
-  return r
-}
-
-function minBy<T>(a: T[], f: (t: T) => number) {
-  let smallest = a[0]
-  let smallestV = f(smallest)
-  a.slice(1).forEach(x => {
-    const v = f(x)
-    if (v < smallestV) {
-      smallest = x
-      smallestV = v
-    }
-  })
-  return smallest
-}
-
 /** Reorder paths greedily, attempting to minimize the amount of pen-up travel time. */
 export function optimize(pointLists: Vec2[][]): Vec2[][] {
   if (pointLists.length === 0) return pointLists
@@ -67,14 +46,28 @@ export function optimize(pointLists: Vec2[][]): Vec2[][] {
     return dx*dx + dy*dy
   }
 
-  const visited = new Set<number>()
+  const unvisited = new Set<number>()
+  for (let i = 0; i < pointLists.length; i++) unvisited.add(i)
   const sortedPointLists: Vec2[][] = []
   let firstIdx = 0
-  visited.add(firstIdx)
+  unvisited.delete(firstIdx)
   sortedPointLists.push(pointLists[firstIdx])
-  while (visited.size < pointLists.length) {
-    const nextIdx = minBy(until(0, pointLists.length * 2).filter(i => !visited.has((i / 2) | 0)), x => dist2Between(firstIdx, x))
-    visited.add((nextIdx / 2) | 0)
+  while (unvisited.size > 0) {
+    let nextIdx = null
+    let minD = Infinity
+    for (const i of unvisited) {
+      // if j == 0, the path is traversed "forwards" (i.e. in the direction listed in the input)
+      // if j == 1, the path is traversed "reversed" (i.e. the opposite direction to the input)
+      for (let j = 0; j < 2; j++) {
+        const d = dist2Between(firstIdx, i * 2 + j)
+        if (d < minD) {
+          minD = d
+          nextIdx = i * 2 + j
+        }
+      }
+    }
+
+    unvisited.delete((nextIdx / 2) | 0)
     sortedPointLists.push(
       nextIdx % 2 === 0
         ? pointLists[(nextIdx / 2) | 0]

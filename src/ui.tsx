@@ -726,11 +726,17 @@ async function replan(paths: Vec2[][], planOptions: PlanOptions) {
 
   const deduped: Vec2[][] = pointJoinRadius === 0 ? scaledToPaperSelected : scaledToPaperSelected.map(p => dedupPoints(p, pointJoinRadius))
 
+  console.time("sorting paths")
+  const reordered = Optimization.optimize(deduped)
+  console.timeEnd("sorting paths")
+
   // Optimize based on just the selected layers.
+  console.time("joining nearby paths")
   const optimized: Vec2[][] = Optimization.joinNearby(
-    Optimization.optimize(deduped),
+    reordered,
     planOptions.pathJoinRadius
   )
+  console.timeEnd("joining nearby paths")
 
   // Convert the paths to units of "steps".
   const {stepsPerMm} = Device.Axidraw
