@@ -223,16 +223,19 @@ export class Plan {
   public motion(i: number) { return this.motions[i]; }
 
   public withPenHeights(penUpHeight: number, penDownHeight: number): Plan {
-    let i = 0
+    let penMotionIndex = 0;
     return new Plan(this.motions.map((motion, j) => {
       if (motion instanceof XYMotion) {
-        return motion
+        return motion;
       } else if (motion instanceof PenMotion) {
-        if (j === this.motions.length - 2)
-          return new PenMotion(penDownHeight, Device.Axidraw.penPctToPos(0), motion.duration())
-        return (i++ % 2 === 0 ? new PenMotion(penUpHeight, penDownHeight, motion.duration()) : new PenMotion(penDownHeight, penUpHeight, motion.duration()))
+        if (j === this.motions.length - 2) {
+          return new PenMotion(penDownHeight, Device.Axidraw.penPctToPos(0), motion.duration());
+        }
+        return (penMotionIndex++ % 2 === 0
+          ? new PenMotion(penUpHeight, penDownHeight, motion.duration())
+          : new PenMotion(penDownHeight, penUpHeight, motion.duration()));
       }
-    }))
+    }));
   }
 
   public serialize(): any {
