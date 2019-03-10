@@ -211,6 +211,11 @@ class Driver {
 
 const doReplan = () => async (dispatch: (a: any) => void, getState: () => State) => {
   const state = getState()
+  if (state.plan && state.plannedOptions && planOptionsEqual(state.plannedOptions, {...state.planOptions, penUpHeight: state.plannedOptions.penUpHeight, penDownHeight: state.plannedOptions.penDownHeight})) {
+    // The existing plan should be the same except for penup/pendown heights.
+    const rejiggered = state.plan.withPenHeights(Device.Axidraw.penPctToPos(state.planOptions.penUpHeight), Device.Axidraw.penPctToPos(state.planOptions.penDownHeight))
+    return dispatch({type: 'SET_PLAN', plan: rejiggered, planOptions: state.planOptions})
+  }
   const plan = await replan(state.paths, state.planOptions)
   dispatch({type: 'SET_PLAN', plan, planOptions: state.planOptions})
 }
