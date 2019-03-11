@@ -11,8 +11,6 @@ import {formatDuration, scaleToPaper, dedupPoints} from './util';
 import {useThunkReducer} from './thunk-reducer'
 import {svgToPaths} from './svg-to-paths'
 
-import './path-data-polyfill.exec'
-
 import './style.css'
 
 import pathJoinRadiusIcon from './icons/path-joining radius.svg';

@@ -1,3 +1,5 @@
+import {getPathData} from './path-data-polyfill';
+
 type Curve = [number, number, number, number, number, number, number, number]
 function isFlatEnough([x0, y0, x1, y1, x2, y2, x3, y3]: Curve, flatness: number) {
   // https://github.com/paperjs/paper.js/blob/a61e83edf2ed1870bd41bad135f4f6fc85b0f628/src/path/Curve.js#L806
@@ -73,7 +75,7 @@ export function svgToPaths(svgString: string) {
         const xfd = svgPoint.matrixTransform(ctm); return [xfd.x, xfd.y] }
       let pathData;
       if (type === 'path') {
-        pathData = (path as any).getPathData({normalize: true})
+        pathData = getPathData((path as any), {normalize: true})
       } else if (type === 'ellipse') {
         const ellipse = path as SVGEllipseElement
         const cx = ellipse.cx.baseVal.value
