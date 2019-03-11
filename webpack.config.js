@@ -24,10 +24,6 @@ module.exports = {
         use: ['style-loader', 'css-loader'],
       },
       {
-        test: /\.exec\.js$/,
-        use: ['script-loader'],
-      },
-      {
         test: /\.svg$/,
         use: ['file-loader'],
       }
