@@ -38,7 +38,7 @@ export function startServer(port: number, device: string | null = null) {
       }
     });
 
-    ws.send(JSON.stringify({c: "dev", p: {path: ebb.port.path}}));
+    ws.send(JSON.stringify({c: "dev", p: {path: ebb ? ebb.port.path : null}}));
 
     ws.on("close", () => {
       clients = clients.filter((w) => w !== ws);
