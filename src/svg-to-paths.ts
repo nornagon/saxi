@@ -58,6 +58,26 @@ function flatten(v: Curve, flatness: number, maxRecursion = 32) {
   return parts
 }
 
+function* walkSvgShapes(svgEl: SVGElement): IterableIterator<SVGElement> {
+  switch (svgEl.tagName.toLowerCase()) {
+    case 'svg':
+    case 'g':
+      for (const child of svgEl.children) {
+        yield* walkSvgShapes(child as SVGElement)
+      }
+      break;
+    case 'rect':
+    case 'circle':
+    case 'ellipse':
+    case 'path':
+    case 'line':
+    case 'polyline':
+    case 'polygon':
+      yield svgEl
+      break;
+  }
+}
+
 export function svgToPaths(svgString: string) {
   const div = document.createElement('div')
   div.style.position = 'absolute'
@@ -65,10 +85,10 @@ export function svgToPaths(svgString: string) {
   document.body.appendChild(div)
   try {
     div.innerHTML = svgString
-    const svg = div.querySelector('svg')
-    const svgPoint = svg.createSVGPoint()
+    const svg = div.querySelector('svg') as SVGElement
+    const svgPoint = (svg as any).createSVGPoint()
     const paths = []
-    for (const path of svg.querySelectorAll('path,ellipse,rect')) {
+    for (const path of walkSvgShapes(svg)) {
       const type = path.nodeName.toLowerCase()
       const ctm = (path as SVGGraphicsElement).getCTM()
       const xf = ([x,y]: [number, number]) => { svgPoint.x = x; svgPoint.y = y;
