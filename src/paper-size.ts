@@ -28,6 +28,7 @@ export class PaperSize {
     "USLetter": new PaperSize(vround(vmul({x: 8.5, y: 11}, 25.4))),
     "USLegal": new PaperSize(vround(vmul({x: 8.5, y: 14}, 25.4))),
     "ArchA": new PaperSize(vround(vmul({x: 9, y: 12}, 25.4))),
+    "A3": new PaperSize({x: 297, y: 420}),
     "A4": new PaperSize({x: 210, y: 297}),
     "A5": new PaperSize({x: 148, y: 210}),
     "A6": new PaperSize({x: 105, y: 148}),
