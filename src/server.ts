@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import http from "http";
 import path from "path";
+import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
 import { EBB } from "./ebb";
 import { Device, PenMotion, Plan } from "./planning";
@@ -49,22 +50,29 @@ export function startServer(port: number, device: string | null = null, enableCo
     });
   });
 
-  app.post("/plot", (req, res) => {
+  app.post("/plot", async (req, res) => {
     const plan = Plan.deserialize(req.body);
     console.log(`Received plan of estimated duration ${formatDuration(plan.duration())}`);
-    if (ebb != null) {
-      console.log("Beginning plot...");
-      const begin = Date.now();
-      doPlot(plan).then(() => {
-        const end = Date.now();
-        console.log(`Plot took ${formatDuration((end - begin) / 1000)}`);
-      });
-    } else {
-      simulatePlot(plan).then(() => {
-        console.log("Simulation complete");
-      });
-    }
+    console.log(ebb != null ? "Beginning plot..." : "Simulating plot...");
     res.status(200).end();
+
+    const begin = Date.now();
+    let wakeLock: any;
+    try {
+      wakeLock = new WakeLock("saxi plotting");
+    } catch (e) {
+      console.warn("Couldn't acquire wake lock. Ensure your machine does not sleep during plotting");
+    }
+
+    try {
+      await (ebb != null ? doPlot(plan) : simulatePlot(plan));
+      const end = Date.now();
+      console.log(`Plot took ${formatDuration((end - begin) / 1000)}`);
+    } finally {
+      if (wakeLock) {
+        wakeLock.release();
+      }
+    }
   });
 
   app.post("/cancel", (req, res) => {
