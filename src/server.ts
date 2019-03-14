@@ -1,3 +1,4 @@
+import cors from "cors";
 import express from "express";
 import http from "http";
 import path from "path";
@@ -6,11 +7,14 @@ import { EBB } from "./ebb";
 import { Device, PenMotion, Plan } from "./planning";
 import { formatDuration } from "./util";
 
-export function startServer(port: number, device: string | null = null) {
+export function startServer(port: number, device: string | null = null, enableCors: boolean = false) {
   const app = express();
 
   app.use("/", express.static(path.join(__dirname, "..", "ui")));
   app.use(express.json({limit: "100mb"}));
+  if (enableCors) {
+    app.use(cors());
+  }
 
   const server = http.createServer(app);
   const wss = new WebSocket.Server({ server });

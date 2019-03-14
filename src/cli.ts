@@ -14,6 +14,10 @@ export function cli(argv: string[]): void {
       describe: "device to connect to",
       type: "string"
     })
+    .option("enable-cors", {
+      describe: "enable cross-origin resource sharing (CORS)",
+      type: "boolean"
+    })
     .option("firmware-version", {
       describe: "print the device's firmware version and exit",
       type: "boolean"
@@ -31,6 +35,6 @@ export function cli(argv: string[]): void {
       await ebb.close();
     });
   } else {
-    startServer(args.port, args.device);
+    startServer(args.port, args.device, args["enable-cors"]);
   }
 }

@@ -32,6 +32,14 @@ $ curl -sL https://deb.nodesource.com/setup_11.x | sudo -E bash -
 
 and then proceed as above :) If you connect to the raspberry pi over ssh, you might want to run the `saxi` server inside a tmux or screen session to have it stay running even if your ssh session disconnects.
 
+#### CORS
+If you want to connect to saxi from a web page that isn't served by saxi
+itself, you'll need to enable
+[CORS](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS), otherwise
+GET/POST requests will be denied by the browser. CORS is disabled by default as
+a security precaution, but if you need it it's available. Just launch saxi with
+the `--enable-cors` flag.
+
 ### Info
 
 saxi makes use of the low-level `LM` command introduced in EBB firmware version
