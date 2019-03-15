@@ -9,7 +9,7 @@ import {PaperSize} from './paper-size';
 import {Vec2, vmul} from './vec';
 import {formatDuration, scaleToPaper, dedupPoints} from './util';
 import {useThunkReducer} from './thunk-reducer'
-import {svgToPaths} from './svg-to-paths'
+import {flattenSVG} from 'flatten-svg'
 
 import './style.css'
 
@@ -736,10 +736,24 @@ function DragTarget() {
 
 ReactDOM.render(<Root driver={Driver.connect()}/>, document.getElementById('app'))
 
+function withSVG<T>(svgString: string, fn: (svg: SVGSVGElement) => T) {
+  const div = document.createElement('div')
+  div.style.position = 'absolute'
+  div.style.left = '99999px'
+  document.body.appendChild(div)
+  try {
+    div.innerHTML = svgString
+    const svg = div.querySelector('svg') as SVGSVGElement
+    return fn(svg)
+  } finally {
+    div.remove()
+  }
+}
+
 function readSvg(svgString: string): Vec2[][] {
-  return svgToPaths(svgString).map(ps => {
-    const a =  ps.map(([x, y]: [number, number]) => ({x, y}));
-    (a as any).stroke = (ps as any).stroke;
+  return withSVG(svgString, flattenSVG).map(line => {
+    const a = line.points.map(([x, y]: [number, number]) => ({x, y}));
+    (a as any).stroke = line.stroke;
     return a
   })
 }
