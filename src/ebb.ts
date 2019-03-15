@@ -14,7 +14,7 @@ export class EBB {
   /** List connected EBBs */
   public static async list(): Promise<string[]> {
     const ports = await SerialPort.list();
-    return ports.filter((p) => p.manufacturer === "SchmalzHaus").map((p) => p.comName);
+    return ports.filter((p) => p.manufacturer === "SchmalzHaus" || p.manufacturer === "SchmalzHaus LLC").map((p) => p.comName);
   }
 
   public port: SerialPort;
