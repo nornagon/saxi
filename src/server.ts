@@ -81,7 +81,13 @@ export function startServer(port: number, device: string | null = null, enableCo
   });
 
   function broadcast(msg: any) {
-    clients.forEach((ws) => ws.send(JSON.stringify(msg)));
+    clients.forEach((ws) => {
+      try {
+        ws.send(JSON.stringify(msg))
+      } catch (e) {
+        console.warn(e)
+      }
+    });
   }
 
   async function doPlot(plan: Plan): Promise<void> {
