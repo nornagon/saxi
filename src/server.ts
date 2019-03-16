@@ -83,9 +83,9 @@ export function startServer(port: number, device: string | null = null, enableCo
   function broadcast(msg: any) {
     clients.forEach((ws) => {
       try {
-        ws.send(JSON.stringify(msg))
+        ws.send(JSON.stringify(msg));
       } catch (e) {
-        console.warn(e)
+        console.warn(e);
       }
     });
   }
