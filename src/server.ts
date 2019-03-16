@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import http from "http";
 import path from "path";
+import SerialPort from "serialport";
 import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
 import { EBB } from "./ebb";
@@ -134,14 +135,13 @@ export function startServer(port: number, device: string | null = null, enableCo
 
   return new Promise((resolve) => {
     server.listen(port, () => {
-      connectEBB(device).then((d) => {
-        if (d) {
+      async function connect() {
+        for await (const d of ebbs()) {
           ebb = d;
-          console.log(`Connected to EBB on ${ebb.port.path}`);
-        } else {
-          console.log(`No EBBs found, simulation mode active`);
+          broadcast({c: "dev", p: {path: ebb ? ebb.port.path : null}});
         }
-      });
+      }
+      connect();
       const {family, address, port} = server.address() as any;
       const addr = `${family === "IPv6" ? `[${address}]` : address}:${port}`;
       console.log(`Server listening on http://${addr}`);
@@ -150,13 +150,63 @@ export function startServer(port: number, device: string | null = null, enableCo
   });
 }
 
+function tryOpen(path: string): Promise<SerialPort> {
+  return new Promise((resolve, reject) => {
+    const port = new SerialPort(path);
+    port.on("open", () => {
+      port.removeAllListeners();
+      resolve(port);
+    });
+    port.on("error", (e) => {
+      port.removeAllListeners();
+      reject(e);
+    });
+  });
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function waitForEbb() {
+  while (true) {
+    const ebbs = await EBB.list();
+    if (ebbs.length) {
+      return ebbs[0];
+    }
+    await sleep(5000);
+  }
+}
+
+async function* ebbs(path?: string) {
+  while (true) {
+    try {
+      const com = path || (await waitForEbb());
+      console.log(`Found EBB at ${com}`);
+      const port = await tryOpen(com);
+      const closed = new Promise((resolve) => {
+        port.once("close", resolve);
+        port.once("error", resolve);
+      });
+      yield new EBB(port);
+      await closed;
+      yield null;
+      console.error(`Lost connection to EBB, reconnecting...`);
+    } catch (e) {
+      console.error(`Error connecting to EBB: ${e.message}`);
+      console.error(`Retrying in 5 seconds...`);
+      await sleep(5000);
+    }
+  }
+}
+
 export async function connectEBB(path: string | undefined): Promise<EBB | null> {
   if (path) {
-    return new EBB(path);
+    return new EBB(new SerialPort(path));
   } else {
     const ebbs = await EBB.list();
     if (ebbs.length) {
-      return new EBB(ebbs[0]);
+      return new EBB(new SerialPort(ebbs[0]));
     } else {
       return null;
     }

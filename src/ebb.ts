@@ -32,8 +32,8 @@ export class EBB {
 
   private cachedSupportsLM: boolean | undefined = undefined;
 
-  constructor(path: string) {
-    this.port = new SerialPort(path);
+  constructor(port: SerialPort) {
+    this.port = port;
     this.parser = this.port.pipe(new SerialPort.parsers.Regex({ regex: /[\r\n]+/ }));
     this.commandQueue = [];
     this.parser.on("data", (chunk: Buffer) => {
