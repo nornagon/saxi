@@ -165,7 +165,7 @@ class Driver {
           }; break;
           case 'dev': {
             if (this.ondevinfo != null) this.ondevinfo(msg.p)
-          }
+          }; break;
           default: {
             console.log('Unknown message from server:', msg)
           }; break;
