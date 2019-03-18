@@ -2,41 +2,19 @@ import React, { useState, useRef, useEffect, useMemo, useContext, useLayoutEffec
 import ReactDOM from 'react-dom';
 import useComponentSize from '@rehooks/component-size';
 
-import {Plan, Device, AxidrawFast, XYMotion} from './planning';
-import * as Planning from './planning';
-import * as Optimization from './optimization';
+import {Plan, Device, XYMotion, PlanOptions} from './planning';
 import {PaperSize} from './paper-size';
-import {Vec2, vmul} from './vec';
+import {Vec2} from './vec';
 import {formatDuration, scaleToPaper, dedupPoints} from './util';
 import {useThunkReducer} from './thunk-reducer'
 import {flattenSVG} from 'flatten-svg'
+
+import PlanWorker from './plan.worker';
 
 import './style.css'
 
 import pathJoinRadiusIcon from './icons/path-joining radius.svg';
 import pointJoinRadiusIcon from './icons/point-joining radius.svg';
-
-type PlanOptions = {
-  paperSize: PaperSize;
-  marginMm: number;
-  selectedLayers: Set<string>;
-  penUpHeight: number;
-  penDownHeight: number;
-  pointJoinRadius: number;
-  pathJoinRadius: number;
-
-  penDownAcceleration: number;
-  penDownMaxVelocity: number;
-  penDownCorneringFactor: number;
-
-  penUpAcceleration: number;
-  penUpMaxVelocity: number;
-
-  penDropDuration: number;
-  penLiftDuration: number;
-
-  sortPaths: boolean;
-};
 
 const planOptionsEqual = (a: PlanOptions, b: PlanOptions): boolean => {
   function setEq<T>(a: Set<T>, b: Set<T>) {
@@ -90,9 +68,6 @@ const initialState = {
   paths: null as Vec2[][] | null,
   layers: [] as string[],
 
-  // The plan that will be sent to the plotter when 'Plot' is clicked.
-  plan: null as Plan | null,
-
   // While a plot is in progress, this will be the index of the current motion.
   progress: (null as number | null),
 }
@@ -109,9 +84,7 @@ function reducer(state: State, action: any): State {
     return {...state, deviceInfo: action.value}
   case 'SET_PATHS':
     const {paths, layers, selectedLayers} = action
-    return {...state, plan: (null as Plan | null), paths, layers, planOptions: {...state.planOptions, selectedLayers}}
-  case 'SET_PLAN':
-    return {...state, plan: action.plan, plannedOptions: action.planOptions}
+    return {...state, paths, layers, planOptions: {...state.planOptions, selectedLayers}}
   case 'SET_PROGRESS':
     return {...state, progress: action.motionIdx}
   case 'SET_CONNECTED':
@@ -219,15 +192,34 @@ class Driver {
   }
 }
 
-const doReplan = () => async (dispatch: (a: any) => void, getState: () => State) => {
-  const state = getState()
-  if (state.plan && state.plannedOptions && planOptionsEqual(state.plannedOptions, {...state.planOptions, penUpHeight: state.plannedOptions.penUpHeight, penDownHeight: state.plannedOptions.penDownHeight})) {
-    // The existing plan should be the same except for penup/pendown heights.
-    const rejiggered = state.plan.withPenHeights(Device.Axidraw.penPctToPos(state.planOptions.penUpHeight), Device.Axidraw.penPctToPos(state.planOptions.penDownHeight))
-    return dispatch({type: 'SET_PLAN', plan: rejiggered, planOptions: state.planOptions})
-  }
-  const plan = await replan(state.paths, state.planOptions)
-  dispatch({type: 'SET_PLAN', plan, planOptions: state.planOptions})
+const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
+  const [isPlanning, setIsPlanning] = useState(false)
+  const [latestPlan, setPlan] = useState(null)
+
+  useEffect(() => {
+    if (!paths) {
+      return
+    }
+    const worker = new (PlanWorker as any)()
+    setIsPlanning(true)
+    console.time("posting to worker")
+    worker.postMessage({paths, planOptions})
+    console.timeEnd("posting to worker")
+    const listener = (m: any) => {
+      console.time("deserializing")
+      const deserialized = Plan.deserialize(m.data)
+      console.timeEnd("deserializing")
+      setPlan(deserialized)
+      setIsPlanning(false)
+    }
+    worker.addEventListener('message', listener)
+    return () => {
+      worker.terminate()
+      worker.removeEventListener('message', listener)
+    }
+  }, [paths, JSON.stringify(planOptions, (k, v) => v instanceof Set ? [...v] : v)])
+
+  return [isPlanning, latestPlan]
 }
 
 const setPaths = (paths: Vec2[][]) => (dispatch: (a: any) => void) => {
@@ -235,7 +227,6 @@ const setPaths = (paths: Vec2[][]) => (dispatch: (a: any) => void) => {
   for (const path of paths) { strokes.add((path as any).stroke) }
   const layers = Array.from(strokes).sort()
   dispatch({type: 'SET_PATHS', paths, layers, selectedLayers: new Set(layers)})
-  dispatch(doReplan())
 }
 
 function PenHeight({state, driver}: {state: State, driver: Driver}) {
@@ -365,11 +356,11 @@ function PlanStatistics({plan}: {plan: Plan}) {
   </div>
 }
 
-function PlanPreview({state, previewSize}: {state: State, previewSize: {width: number, height: number}}) {
+function PlanPreview({state, previewSize, plan}: {state: State, previewSize: {width: number, height: number}, plan: Plan | null}) {
   const ps = state.planOptions.paperSize
   const memoizedPlanPreview = useMemo(() => {
-    if (state.plan) {
-      const lines = state.plan.motions.map(m => {
+    if (plan) {
+      const lines = plan.motions.map(m => {
         if (m instanceof XYMotion) {
           return m.blocks.map(b => b.p1).concat([m.p2])
         } else return []
@@ -384,7 +375,7 @@ function PlanPreview({state, previewSize}: {state: State, previewSize: {width: n
         )}
       </g>
     }
-  }, [state.plan])
+  }, [plan])
 
   // w/h of svg.
   // first try scaling so that h = area.h. if w < area.w, then ok.
@@ -417,11 +408,11 @@ function PlanPreview({state, previewSize}: {state: State, previewSize: {width: n
   }, [state.progress])
 
   let progressIndicator = null
-  if (state.progress != null && state.plan != null) {
-    const motion = state.plan.motion(state.progress)
+  if (state.progress != null && plan != null) {
+    const motion = plan.motion(state.progress)
     const pos = motion instanceof XYMotion
       ? motion.instant(Math.min(microprogress / 1000, motion.duration())).p
-      : (state.plan.motion(state.progress-1) as XYMotion).p2
+      : (plan.motion(state.progress-1) as XYMotion).p2
     const {stepsPerMm} = Device.Axidraw
     const posXMm = pos.x / stepsPerMm
     const posYMm = pos.y / stepsPerMm
@@ -492,7 +483,7 @@ function LayerSelector({state}: {state: State}) {
   </div>
 }
 
-function PlotButtons({state, driver}: {state: State, driver: Driver}) {
+function PlotButtons({state, plan, isPlanning, driver}: {state: State, plan: Plan | null, isPlanning: boolean, driver: Driver}) {
   const dispatch = useContext(DispatchContext)
   function cancel() {
     driver.cancel()
@@ -501,26 +492,25 @@ function PlotButtons({state, driver}: {state: State, driver: Driver}) {
     driver.plot(plan)
   }
 
-  const needsReplan = state.plan != null && !planOptionsEqual(state.planOptions, state.plannedOptions)
-  return <div >
+  return <div>
     {
-      needsReplan
+      isPlanning
         ? <button
           className="replan-button"
-          onClick={() => dispatch(doReplan())}>
-            Replan
+          disabled={true}>
+          Replanning...
         </button>
         : <button
           className={`plot-button ${state.progress != null ? 'plot-button--plotting' : ''}`}
-          disabled={state.plan == null || state.progress != null}
-          onClick={() => plot(state.plan)}>
-            {state.plan && state.progress ? 'Plotting...' : 'Plot'}
+          disabled={plan == null || state.progress != null}
+          onClick={() => plot(plan)}>
+            {plan && state.progress ? 'Plotting...' : 'Plot'}
         </button>
     }
     <button
       className={`cancel-button ${state.progress != null ? 'cancel-button--active' : ''}`}
       onClick={cancel}
-      disabled={state.plan == null || state.progress == null}
+      disabled={plan == null || state.progress == null}
     >Cancel</button>
   </div>
 }
@@ -684,6 +674,9 @@ function Root({driver}: {driver: Driver}) {
       document.removeEventListener('paste', onpaste)
     }
   })
+
+  const [isPlanning, plan] = usePlan(state.paths, state.planOptions)
+
   const previewArea = useRef(null)
   const previewSize = useComponentSize(previewArea)
   return <DispatchContext.Provider value={dispatch}>
@@ -713,13 +706,17 @@ function Root({driver}: {driver: Driver}) {
         <div className="control-panel-bottom">
           <div className="section-header">plot</div>
           <div className="section-body section-body__plot">
-            <PlanStatistics plan={state.plan} />
-            <PlotButtons state={state} driver={driver} />
+            <PlanStatistics plan={plan} />
+            <PlotButtons plan={plan} isPlanning={isPlanning} state={state} driver={driver} />
           </div>
         </div>
       </div>
       <div className="preview-area" ref={previewArea}>
-        <PlanPreview state={state} previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}} />
+        <PlanPreview
+          state={state}
+          previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}}
+          plan={plan}
+        />
         {state.paths ? null : <DragTarget/>}
       </div>
     </div>
@@ -756,55 +753,4 @@ function readSvg(svgString: string): Vec2[][] {
     (a as any).stroke = line.stroke;
     return a
   })
-}
-
-async function replan(paths: Vec2[][], planOptions: PlanOptions) {
-  const {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight, pointJoinRadius} = planOptions;
-  // Compute scaling using _all_ the paths, so it's the same no matter what
-  // layers are selected.
-  const scaledToPaper: Vec2[][] = scaleToPaper(paths, paperSize, marginMm)
-
-  // Rescaling loses the stroke info, so refer back to the original paths to
-  // filter based on the stroke. Rescaling doesn't change the number or order
-  // of the paths.
-  const scaledToPaperSelected = scaledToPaper.filter((path, i) =>
-    selectedLayers.has((paths[i] as any).stroke))
-
-  const deduped: Vec2[][] = pointJoinRadius === 0 ? scaledToPaperSelected : scaledToPaperSelected.map(p => dedupPoints(p, pointJoinRadius))
-
-  console.time("sorting paths")
-  const reordered = planOptions.sortPaths ? Optimization.optimize(deduped) : deduped
-  console.timeEnd("sorting paths")
-
-  // Optimize based on just the selected layers.
-  console.time("joining nearby paths")
-  const optimized: Vec2[][] = Optimization.joinNearby(
-    reordered,
-    planOptions.pathJoinRadius
-  )
-  console.timeEnd("joining nearby paths")
-
-  // Convert the paths to units of "steps".
-  const {stepsPerMm} = Device.Axidraw
-  const inSteps = optimized.map(ps => ps.map(p => vmul(p, stepsPerMm)))
-
-  // And finally, motion planning.
-  const plan = Planning.plan(inSteps, {
-    penUpPos: Device.Axidraw.penPctToPos(penUpHeight),
-    penDownPos: Device.Axidraw.penPctToPos(penDownHeight),
-    penDownProfile: {
-      acceleration: planOptions.penDownAcceleration * Device.Axidraw.stepsPerMm,
-      maximumVelocity: planOptions.penDownMaxVelocity * Device.Axidraw.stepsPerMm,
-      corneringFactor: planOptions.penDownCorneringFactor * Device.Axidraw.stepsPerMm,
-    },
-    penUpProfile: {
-      acceleration: planOptions.penUpAcceleration * Device.Axidraw.stepsPerMm,
-      maximumVelocity: planOptions.penUpMaxVelocity * Device.Axidraw.stepsPerMm,
-      corneringFactor: 0,
-    },
-    penDropDuration: planOptions.penDropDuration,
-    penLiftDuration: planOptions.penLiftDuration,
-  })
-
-  return plan
 }

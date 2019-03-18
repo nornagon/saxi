@@ -2,7 +2,30 @@
  * Cribbed from https://github.com/fogleman/axi/blob/master/axi/planner.py
  */
 const epsilon = 1e-9;
+import {PaperSize} from "./paper-size";
 import {vadd, vdot, Vec2, vlen, vmul, vnorm, vsub} from "./vec";
+
+export interface PlanOptions {
+  paperSize: PaperSize;
+  marginMm: number;
+  selectedLayers: Set<string>;
+  penUpHeight: number;
+  penDownHeight: number;
+  pointJoinRadius: number;
+  pathJoinRadius: number;
+
+  penDownAcceleration: number;
+  penDownMaxVelocity: number;
+  penDownCorneringFactor: number;
+
+  penUpAcceleration: number;
+  penUpMaxVelocity: number;
+
+  penDropDuration: number;
+  penLiftDuration: number;
+
+  sortPaths: boolean;
+}
 
 interface Instant {
   t: number;
