@@ -68,4 +68,6 @@ function replan(paths: Vec2[][], planOptions: PlanOptions): Plan {
   return plan;
 }
 
-export default {} as typeof Worker & (new() => Worker; )
+export default {} as typeof Worker & {
+  new(): Worker;
+};
