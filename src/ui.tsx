@@ -16,29 +16,6 @@ import "./style.css";
 import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
 
-const planOptionsEqual = (a: PlanOptions, b: PlanOptions): boolean => {
-  function setEq<T>(a: Set<T>, b: Set<T>) {
-    if (a.size !== b.size) { return false; }
-    for (const e of a) {
-      if (!b.has(e)) {
-        return false;
-    }
-      }
-    return true;
-  }
-  return Object.keys(a).every((k) => {
-    const av = (a as any)[k];
-    const bv = (b as any)[k];
-    if (av instanceof Set) {
-      return setEq(av, bv);
-    } else if (av instanceof PaperSize) {
-      return av.size.x === bv.size.x && av.size.y === bv.size.y;
-    } else {
-      return av === bv;
-    }
-  });
-};
-
 const initialState = {
   connected: true,
 
@@ -210,9 +187,40 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
   const [isPlanning, setIsPlanning] = useState(false);
   const [latestPlan, setPlan] = useState(null);
 
+  function serialize(po: PlanOptions): string {
+    return JSON.stringify(planOptions, (k, v) => v instanceof Set ? [...v] : v);
+  }
+
+  function attemptRejigger(previousOptions: PlanOptions, newOptions: PlanOptions, previousPlan: Plan) {
+    const newOptionsWithOldPenHeights = {
+      ...newOptions,
+      penUpHeight: previousOptions.penUpHeight,
+      penDownHeight: previousOptions.penDownHeight,
+    };
+    if (serialize(previousOptions) === serialize(newOptionsWithOldPenHeights)) {
+      // The existing plan should be the same except for penup/pendown heights.
+      return previousPlan.withPenHeights(
+        Device.Axidraw.penPctToPos(newOptions.penUpHeight),
+        Device.Axidraw.penPctToPos(newOptions.penDownHeight)
+      );
+    }
+  }
+
+  const lastPlan = useRef(null);
+  const lastPlanOptions = useRef(null);
+
   useEffect(() => {
     if (!paths) {
       return;
+    }
+    if (lastPlan.current != null) {
+      const rejiggered = attemptRejigger(lastPlanOptions.current, planOptions, lastPlan.current);
+      if (rejiggered) {
+        setPlan(rejiggered);
+        lastPlan.current = rejiggered;
+        lastPlanOptions.current = planOptions;
+        return;
+      }
     }
     const worker = new (PlanWorker as any)();
     setIsPlanning(true);
@@ -224,14 +232,17 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
       const deserialized = Plan.deserialize(m.data);
       console.timeEnd("deserializing");
       setPlan(deserialized);
+      lastPlan.current = deserialized;
+      lastPlanOptions.current = planOptions;
       setIsPlanning(false);
     };
     worker.addEventListener("message", listener);
     return () => {
       worker.terminate();
       worker.removeEventListener("message", listener);
+      setIsPlanning(false);
     };
-  }, [paths, JSON.stringify(planOptions, (k, v) => v instanceof Set ? [...v] : v)]);
+  }, [paths, serialize(planOptions)]);
 
   return [isPlanning, latestPlan];
 };
