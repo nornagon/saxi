@@ -1,1 +1,1 @@
-require('./background-planner')
+require("./background-planner");
