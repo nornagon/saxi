@@ -42,6 +42,8 @@ const initialState = {
     penLiftDuration: 0.12,
 
     sortPaths: true,
+
+    minimumPathLength: 0,
   } as PlanOptions,
 
   // Options used to produce the current value of |plan|.
@@ -598,6 +600,16 @@ function PlanOptions({state}: {state: State}) {
           sort paths
         </label>
       </div>
+      <label title="Remove paths that are shorter than this length (in mm)">
+        minimum path length
+        <input
+          type="number"
+          value={state.planOptions.minimumPathLength}
+          step="0.1"
+          min="0"
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {minimumPathLength: Number(e.target.value)}})}
+        />
+      </label>
       <label>
         pen-down acceleration (mm/s<sup>2</sup>)
         <input

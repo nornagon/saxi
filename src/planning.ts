@@ -25,6 +25,8 @@ export interface PlanOptions {
   penLiftDuration: number;
 
   sortPaths: boolean;
+
+  minimumPathLength: number;
 }
 
 interface Instant {

@@ -33,6 +33,21 @@ export function joinNearby(pointLists: Vec2[][], tolerance: number = 0.5): Vec2[
   return pointLists.reduce(appendAndJoin, []);
 }
 
+function pathLength(pointList: Vec2[]): number {
+  if (pointList.length <= 1) { return 0; }
+  let length = 0;
+  let lastPoint = pointList[0];
+  for (let i = 1; i < pointList.length; i++) {
+    length += vlen(vsub(lastPoint, pointList[i]));
+    lastPoint = pointList[i];
+  }
+  return length;
+}
+
+export function elideShortPaths(pointLists: Vec2[][], minimumPathLength: number): Vec2[][] {
+  return pointLists.filter((pl) => pathLength(pl) >= minimumPathLength);
+}
+
 /** Reorder paths greedily, attempting to minimize the amount of pen-up travel time. */
 export function optimize(pointLists: Vec2[][]): Vec2[][] {
   if (pointLists.length === 0) { return pointLists; }

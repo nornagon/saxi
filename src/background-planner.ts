@@ -13,43 +13,50 @@ self.addEventListener("message", (m) => {
   (self as any).postMessage(serialized);
 });
 
-function replan(paths: Vec2[][], planOptions: PlanOptions): Plan {
-  const {paperSize, marginMm, selectedLayers, penUpHeight, penDownHeight, pointJoinRadius} = planOptions;
+function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
+  let paths = inPaths;
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
-  const scaledToPaper: Vec2[][] = scaleToPaper(paths, paperSize, marginMm);
+  paths = scaleToPaper(paths, planOptions.paperSize, planOptions.marginMm);
 
   // Rescaling loses the stroke info, so refer back to the original paths to
   // filter based on the stroke. Rescaling doesn't change the number or order
   // of the paths.
-  const scaledToPaperSelected = scaledToPaper.filter((path, i) =>
-    selectedLayers.has((paths[i] as any).stroke));
+  paths = paths.filter((path, i) => planOptions.selectedLayers.has((inPaths[i] as any).stroke));
 
-  const deduped: Vec2[][] = pointJoinRadius === 0
-    ? scaledToPaperSelected
-    : scaledToPaperSelected.map((p) => dedupPoints(p, pointJoinRadius));
+  if (planOptions.pointJoinRadius > 0) {
+    paths = paths.map((p) => dedupPoints(p, planOptions.pointJoinRadius));
+  }
 
-  console.time("sorting paths");
-  const reordered = planOptions.sortPaths ? Optimization.optimize(deduped) : deduped;
-  console.timeEnd("sorting paths");
+  if (planOptions.sortPaths) {
+    console.time("sorting paths");
+    paths = Optimization.optimize(paths);
+    console.timeEnd("sorting paths");
+  }
 
-  // Optimize based on just the selected layers.
-  console.time("joining nearby paths");
-  const optimized: Vec2[][] = Optimization.joinNearby(
-    reordered,
-    planOptions.pathJoinRadius
-  );
-  console.timeEnd("joining nearby paths");
+  if (planOptions.minimumPathLength > 0) {
+    console.time("eliding short paths");
+    paths = Optimization.elideShortPaths(paths, planOptions.minimumPathLength);
+    console.timeEnd("eliding short paths");
+  }
+
+  if (planOptions.pathJoinRadius > 0) {
+    console.time("joining nearby paths");
+    paths = Optimization.joinNearby(
+      paths,
+      planOptions.pathJoinRadius
+    );
+    console.timeEnd("joining nearby paths");
+  }
 
   // Convert the paths to units of "steps".
-  const {stepsPerMm} = Device.Axidraw;
-  const inSteps = optimized.map((ps) => ps.map((p) => vmul(p, stepsPerMm)));
+  paths = paths.map((ps) => ps.map((p) => vmul(p, Device.Axidraw.stepsPerMm)));
 
   // And finally, motion planning.
   console.time("planning pen motions");
-  const plan = Planning.plan(inSteps, {
-    penUpPos: Device.Axidraw.penPctToPos(penUpHeight),
-    penDownPos: Device.Axidraw.penPctToPos(penDownHeight),
+  const plan = Planning.plan(paths, {
+    penUpPos: Device.Axidraw.penPctToPos(planOptions.penUpHeight),
+    penDownPos: Device.Axidraw.penPctToPos(planOptions.penDownHeight),
     penDownProfile: {
       acceleration: planOptions.penDownAcceleration * Device.Axidraw.stepsPerMm,
       maximumVelocity: planOptions.penDownMaxVelocity * Device.Axidraw.stepsPerMm,
