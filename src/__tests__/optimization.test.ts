@@ -1,4 +1,4 @@
-import {joinNearby} from '../optimization';
+import {joinNearby, elideShortPaths} from '../optimization';
 
 describe("joinNearby", () => {
   it("can handle an empty input", () => {
@@ -39,5 +39,34 @@ describe("joinNearby", () => {
     ], 0.5)).toEqual([
       [{x:0,y:0},{x:1,y:0},{x:2,y:0}],
     ])
+  })
+})
+
+describe("elideShortPaths", () => {
+  it("can handle an empty input", () => {
+    expect(elideShortPaths([], 1)).toEqual([])
+  })
+
+  it("elides a point", () => {
+    expect(elideShortPaths([[{x:0,y:0}]], 1)).toEqual([])
+  })
+
+  it("does not elide a single long line", () => {
+    expect(elideShortPaths([[{x:0,y:0},{x:10,y:0}]], 1)).toEqual([[{x:0,y:0},{x:10,y:0}]])
+  })
+
+  it("elides a short line", () => {
+    expect(elideShortPaths([[{x:0,y:0},{x:0,y:0}]], 1)).toEqual([])
+  })
+
+  it("keeps a long line, elides a short one", () => {
+    expect(elideShortPaths([[{x:0,y:0},{x:10,y:0}], [{x:0,y:0}]], 1)).toEqual([[{x:0,y:0},{x:10,y:0}]])
+  })
+
+  it("counts the full length of a line", () => {
+    const lines = [
+      [{x:0,y:0}, {x:1,y:0}, {x:1,y:1}]
+    ]
+    expect(elideShortPaths(lines, 1.5)).toEqual(lines)
   })
 })
