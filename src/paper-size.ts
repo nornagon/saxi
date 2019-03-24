@@ -6,21 +6,21 @@ function vround(v: Vec2, digits: number = 2): Vec2 {
 
 export class PaperSize {
 
-  get landscape(): PaperSize {
+  public get landscape(): PaperSize {
     return new PaperSize({
       x: Math.max(this.size.x, this.size.y),
       y: Math.min(this.size.x, this.size.y),
     });
   }
 
-  get portrait(): PaperSize {
+  public get portrait(): PaperSize {
     return new PaperSize({
       x: Math.min(this.size.x, this.size.y),
       y: Math.max(this.size.x, this.size.y),
     });
   }
 
-  get isLandscape(): boolean {
+  public get isLandscape(): boolean {
     return this.size.x === Math.max(this.size.x, this.size.y);
   }
 
@@ -36,7 +36,7 @@ export class PaperSize {
     "5x7": new PaperSize(vround(vmul({x: 5, y: 7}, 25.4))),
   };
   public size: Vec2;
-  constructor(size: Vec2) {
+  public constructor(size: Vec2) {
     this.size = size;
   }
 }

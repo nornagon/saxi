@@ -99,7 +99,7 @@ export class Block {
 
   public distance: number;
 
-  constructor(accel: number, duration: number, vInitial: number, p1: Vec2, p2: Vec2) {
+  public constructor(accel: number, duration: number, vInitial: number, p1: Vec2, p2: Vec2) {
     if (!(vInitial >= 0)) {
       throw new Error(`vInitial must be >= 0, but was ${vInitial}`);
     }
@@ -114,7 +114,7 @@ export class Block {
     this.distance = vlen(vsub(p1, p2));
   }
 
-  get vFinal(): number { return Math.max(0, this.vInitial + this.accel * this.duration); }
+  public get vFinal(): number { return Math.max(0, this.vInitial + this.accel * this.duration); }
 
   public instant(tU: number, dt: number= 0, ds: number= 0): Instant {
     const t = Math.max(0, Math.min(this.duration, tU));
@@ -150,7 +150,7 @@ export class PenMotion implements Motion {
   public finalPos: number;
   public pDuration: number;
 
-  constructor(initialPos: number, finalPos: number, duration: number) {
+  public constructor(initialPos: number, finalPos: number, duration: number) {
     this.initialPos = initialPos;
     this.finalPos = finalPos;
     this.pDuration = duration;
@@ -197,16 +197,16 @@ export class XYMotion implements Motion {
   private ts: number[];
   private ss: number[];
 
-  constructor(blocks: Block[]) {
+  public constructor(blocks: Block[]) {
     this.blocks = blocks;
     this.ts = scanLeft(blocks.map((b) => b.duration), 0, (a, b) => a + b).slice(0, -1);
     this.ss = scanLeft(blocks.map((b) => b.distance), 0, (a, b) => a + b).slice(0, -1);
   }
 
-  get p1(): Vec2 {
+  public get p1(): Vec2 {
     return this.blocks[0].p1;
   }
-  get p2(): Vec2 {
+  public get p2(): Vec2 {
     return this.blocks[this.blocks.length - 1].p2;
   }
 
@@ -239,7 +239,7 @@ export class Plan {
     }));
   }
   public motions: Motion[];
-  constructor(motions: Motion[]) {
+  public constructor(motions: Motion[]) {
     this.motions = motions;
   }
   public duration(): number {
@@ -282,7 +282,7 @@ class Segment {
   public entryVelocity: number = 0;
   public blocks: Block[];
 
-  constructor(p1: Vec2, p2: Vec2) {
+  public constructor(p1: Vec2, p2: Vec2) {
     this.p1 = p1;
     this.p2 = p2;
     this.blocks = [];

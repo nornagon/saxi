@@ -3,8 +3,8 @@ import { useState } from "react";
 // redux-thunk
 function createThunkMiddleware<S, A>(extraArgument?: any) {
   return ({ dispatch, getState }: {
-    dispatch: (a: A) => void,
-    getState: () => S
+    dispatch: (a: A) => void;
+    getState: () => S;
   }) => (next: (a: A) => void) => (action: A) => {
     if (typeof action === "function") {
       return action(dispatch, getState, extraArgument);

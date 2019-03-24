@@ -23,7 +23,7 @@ export class EBB {
 
   public port: SerialPort;
   public parser: SerialPort.parsers.Delimiter;
-  private commandQueue: Array<IterableIterator<any>>;
+  private commandQueue: IterableIterator<any>[];
 
   private microsteppingMode: number = 0;
 
@@ -32,7 +32,7 @@ export class EBB {
 
   private cachedSupportsLM: boolean | undefined = undefined;
 
-  constructor(port: SerialPort) {
+  public constructor(port: SerialPort) {
     this.port = port;
     this.parser = this.port.pipe(new SerialPort.parsers.Regex({ regex: /[\r\n]+/ }));
     this.commandQueue = [];
@@ -186,7 +186,7 @@ export class EBB {
 
   public async waitUntilMotorsIdle(): Promise<void> {
     while (true) {
-      const [, commandStatus, motor1Status, motor2Status, fifoStatus] = (await this.query("QM")).split(",");
+      const [, commandStatus, _motor1Status, _motor2Status, fifoStatus] = (await this.query("QM")).split(",");
       if (commandStatus === "0" && fifoStatus === "0") {
         break;
       }
@@ -339,7 +339,7 @@ export class EBB {
    * @param finalStepsPerSec Final movement rate, in steps per second
    * @return A tuple of (initialAxisRate, deltaR) that can be passed to the LM command
    */
-   private axisRate(steps: number, initialStepsPerSec: number, finalStepsPerSec: number): [number, number] {
+  private axisRate(steps: number, initialStepsPerSec: number, finalStepsPerSec: number): [number, number] {
     const initialRate = Math.round(initialStepsPerSec * ((1 << 31) / 25000));
     const finalRate = Math.round(finalStepsPerSec * ((1 << 31) / 25000));
     const moveTime = 2 * Math.abs(steps) / (initialStepsPerSec + finalStepsPerSec);

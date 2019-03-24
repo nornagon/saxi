@@ -1,7 +1,7 @@
 import * as Optimization from "./optimization";
 import * as Planning from "./planning";
-import {AxidrawFast, Device, Plan, PlanOptions, XYMotion} from "./planning";
-import {dedupPoints, formatDuration, scaleToPaper} from "./util";
+import {Device, Plan, PlanOptions} from "./planning";
+import {dedupPoints, scaleToPaper} from "./util";
 import {Vec2, vmul} from "./vec";
 
 self.addEventListener("message", (m) => {
@@ -75,6 +75,7 @@ function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   return plan;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
 export default {} as typeof Worker & {
   new(): Worker;
 };

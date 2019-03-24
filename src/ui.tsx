@@ -6,7 +6,7 @@ import {flattenSVG} from "flatten-svg";
 import {PaperSize} from "./paper-size";
 import {Device, Plan, PlanOptions, XYMotion} from "./planning";
 import {useThunkReducer} from "./thunk-reducer";
-import {dedupPoints, formatDuration, scaleToPaper} from "./util";
+import {formatDuration} from "./util";
 import {Vec2} from "./vec";
 
 import PlanWorker from "./plan.worker";
@@ -16,35 +16,37 @@ import "./style.css";
 import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
 
+const defaultPlanOptions: PlanOptions = {
+  penUpHeight: 50,
+  penDownHeight: 60,
+  pointJoinRadius: 0,
+  pathJoinRadius: 0.5,
+  paperSize: PaperSize.standard.ArchA.landscape,
+  marginMm: 20,
+  selectedLayers: new Set(),
+
+  penDownAcceleration: 200,
+  penDownMaxVelocity: 50,
+  penDownCorneringFactor: 0.127,
+
+  penUpAcceleration: 400,
+  penUpMaxVelocity: 200,
+
+  penDropDuration: 0.12,
+  penLiftDuration: 0.12,
+
+  sortPaths: true,
+
+  minimumPathLength: 0,
+};
+
 const initialState = {
   connected: true,
 
   deviceInfo: null as DeviceInfo | null,
 
   // UI state
-  planOptions: {
-    penUpHeight: 50,
-    penDownHeight: 60,
-    pointJoinRadius: 0,
-    pathJoinRadius: 0.5,
-    paperSize: PaperSize.standard.ArchA.landscape,
-    marginMm: 20,
-    selectedLayers: (new Set()) as Set<string>,
-
-    penDownAcceleration: 200,
-    penDownMaxVelocity: 50,
-    penDownCorneringFactor: 0.127,
-
-    penUpAcceleration: 400,
-    penUpMaxVelocity: 200,
-
-    penDropDuration: 0.12,
-    penLiftDuration: 0.12,
-
-    sortPaths: true,
-
-    minimumPathLength: 0,
-  } as PlanOptions,
+  planOptions: defaultPlanOptions,
 
   // Options used to produce the current value of |plan|.
   plannedOptions: null as PlanOptions | null,
@@ -63,20 +65,20 @@ const DispatchContext = React.createContext(null);
 
 function reducer(state: State, action: any): State {
   switch (action.type) {
-  case "SET_PLAN_OPTION":
-    return {...state, planOptions: {...state.planOptions, ...action.value}};
-  case "SET_DEVICE_INFO":
-    return {...state, deviceInfo: action.value};
-  case "SET_PATHS":
-    const {paths, layers, selectedLayers} = action;
-    return {...state, paths, layers, planOptions: {...state.planOptions, selectedLayers}};
-  case "SET_PROGRESS":
-    return {...state, progress: action.motionIdx};
-  case "SET_CONNECTED":
-    return {...state, connected: action.connected};
-  default:
-    console.warn(`Unrecognized action type '${action.type}'`);
-    return state;
+    case "SET_PLAN_OPTION":
+      return {...state, planOptions: {...state.planOptions, ...action.value}};
+    case "SET_DEVICE_INFO":
+      return {...state, deviceInfo: action.value};
+    case "SET_PATHS":
+      const {paths, layers, selectedLayers} = action;
+      return {...state, paths, layers, planOptions: {...state.planOptions, selectedLayers}};
+    case "SET_PROGRESS":
+      return {...state, progress: action.motionIdx};
+    case "SET_CONNECTED":
+      return {...state, connected: action.connected};
+    default:
+      console.warn(`Unrecognized action type '${action.type}'`);
+      return state;
   }
 }
 
@@ -103,7 +105,7 @@ class Driver {
 
   public connect() {
     this.socket = new WebSocket(`ws://${document.location.host}/chat`);
-    this.socket.addEventListener("open", (e: Event) => {
+    this.socket.addEventListener("open", () => {
       console.log(`Connected to EBB server.`);
       this.connected = true;
       if (this.onconnectionchange) {
@@ -144,10 +146,10 @@ class Driver {
         }
       }
     });
-    this.socket.addEventListener("error", (e: ErrorEvent) => {
+    this.socket.addEventListener("error", (_e: ErrorEvent) => {
       // TODO: something
     });
-    this.socket.addEventListener("close", (e: CloseEvent) => {
+    this.socket.addEventListener("close", () => {
       console.log(`Disconnected from EBB server, reconnecting in 5 seconds.`);
       window.clearInterval(this.pingInterval);
       this.pingInterval = null;
@@ -256,7 +258,7 @@ const setPaths = (paths: Vec2[][]) => (dispatch: (a: any) => void) => {
   dispatch({type: "SET_PATHS", paths, layers, selectedLayers: new Set(layers)});
 };
 
-function PenHeight({state, driver}: {state: State, driver: Driver}) {
+function PenHeight({state, driver}: {state: State; driver: Driver}) {
   const {penUpHeight, penDownHeight} = state.planOptions;
   const dispatch = useContext(DispatchContext);
   const setPenUpHeight = (x: number) => dispatch({type: "SET_PLAN_OPTION", value: {penUpHeight: x}});
@@ -348,11 +350,11 @@ function PaperConfig({state}: {state: State}) {
         />
       </label>
       <SwapPaperSizesButton onClick={() => {
-          dispatch({
-            type: "SET_PLAN_OPTION",
-            value: {paperSize: paperSize.isLandscape ? paperSize.portrait : paperSize.landscape}
-          });
-        }} />
+        dispatch({
+          type: "SET_PLAN_OPTION",
+          value: {paperSize: paperSize.isLandscape ? paperSize.portrait : paperSize.landscape}
+        });
+      }} />
       <label className="paper-label">
         height (mm)
         <input
@@ -390,9 +392,9 @@ function PlanStatistics({plan}: {plan: Plan}) {
 
 function PlanPreview(
   {state, previewSize, plan}: {
-    state: State,
-    previewSize: {width: number, height: number},
-    plan: Plan | null
+    state: State;
+    previewSize: {width: number; height: number};
+    plan: Plan | null;
   }
 ) {
   const ps = state.planOptions.paperSize;
@@ -527,13 +529,12 @@ function LayerSelector({state}: {state: State}) {
 
 function PlotButtons(
   {state, plan, isPlanning, driver}: {
-    state: State,
-    plan: Plan | null,
-    isPlanning: boolean,
-    driver: Driver
+    state: State;
+    plan: Plan | null;
+    isPlanning: boolean;
+    driver: Driver;
   }
 ) {
-  const dispatch = useContext(DispatchContext);
   function cancel() {
     driver.cancel();
   }
@@ -553,7 +554,7 @@ function PlotButtons(
           className={`plot-button ${state.progress != null ? "plot-button--plotting" : ""}`}
           disabled={plan == null || state.progress != null}
           onClick={() => plot(plan)}>
-            {plan && state.progress ? "Plotting..." : "Plot"}
+          {plan && state.progress ? "Plotting..." : "Plot"}
         </button>
     }
     <button

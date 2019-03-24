@@ -9,14 +9,14 @@ export function vlen2(a: Vec2): number {
 export function vlen(a: Vec2): number {
   return Math.sqrt(vlen2(a));
 }
-export function vnorm(a: Vec2): Vec2 {
-  return vmul(a, 1 / vlen(a));
-}
 export function vsub(a: Vec2, b: Vec2): Vec2 {
   return {x: a.x - b.x, y: a.y - b.y};
 }
 export function vmul(a: Vec2, s: number): Vec2 {
   return {x: a.x * s, y: a.y * s};
+}
+export function vnorm(a: Vec2): Vec2 {
+  return vmul(a, 1 / vlen(a));
 }
 export function vadd(a: Vec2, b: Vec2): Vec2 {
   return {x: a.x + b.x, y: a.y + b.y};
