@@ -136,7 +136,7 @@ export function startServer(port: number, device: string | null = null, enableCo
   return new Promise((resolve) => {
     server.listen(port, () => {
       async function connect() {
-        for await (const d of ebbs()) {
+        for await (const d of ebbs(device)) {
           ebb = d;
           broadcast({c: "dev", p: {path: ebb ? ebb.port.path : null}});
         }
