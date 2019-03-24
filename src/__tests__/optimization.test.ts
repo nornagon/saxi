@@ -1,4 +1,4 @@
-import {joinNearby, elideShortPaths} from '../optimization';
+import {joinNearby, elideShortPaths, optimize} from '../optimization';
 
 describe("joinNearby", () => {
   it("can handle an empty input", () => {
@@ -68,5 +68,41 @@ describe("elideShortPaths", () => {
       [{x:0,y:0}, {x:1,y:0}, {x:1,y:1}]
     ]
     expect(elideShortPaths(lines, 1.5)).toEqual(lines)
+  })
+})
+
+describe("optimize", () => {
+  it("can handle an empty input", () => {
+    expect(optimize([])).toEqual([])
+  })
+
+  it("can handle a point", () => {
+    expect(optimize([[{x:0,y:0}]])).toEqual([[{x:0,y:0}]])
+  })
+
+  it("can handle a single line", () => {
+    expect(optimize([[{x:0,y:0},{x:1,y:0}]])).toEqual([[{x:0,y:0},{x:1,y:0}]])
+  })
+
+  it("reverses a line", () => {
+    expect(optimize([
+      [{x:0,y:0}, {x:10,y:0}],
+      [{x:0,y:1}, {x:10,y:1}],
+    ])).toEqual([
+      [{x:0,y:0}, {x:10,y:0}],
+      [{x:10,y:1}, {x:0,y:1}],
+    ])
+  })
+
+  it("reorders lines", () => {
+    expect(optimize([
+      [{x:0,y:0}, {x:1,y:0}],
+      [{x:2,y:0}, {x:3,y:0}],
+      [{x:1,y:0}, {x:2,y:0}],
+    ])).toEqual([
+      [{x:0,y:0}, {x:1,y:0}],
+      [{x:1,y:0}, {x:2,y:0}],
+      [{x:2,y:0}, {x:3,y:0}],
+    ])
   })
 })
