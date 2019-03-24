@@ -67,18 +67,6 @@
     "ws": "^6.1.3",
     "yargs": "^12.0.5"
   },
-  "pkg": {
-    "scripts": [
-      "dist/server/*.js"
-    ],
-    "assets": [
-      "static/**/*",
-      "dist/ui/*.js"
-    ],
-    "targets": [
-      "node10"
-    ]
-  },
   "jest": {
     "preset": "ts-jest"
   },
