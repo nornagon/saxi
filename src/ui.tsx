@@ -103,6 +103,7 @@ class Driver {
   public ondevinfo: (devInfo: DeviceInfo) => void | null;
   public onpause: (paused: boolean) => void | null;
   public onconnectionchange: (connected: boolean) => void | null;
+  public onplan: (plan: Plan) => void | null;
 
   private socket: WebSocket;
   private connected: boolean;
@@ -148,6 +149,11 @@ class Driver {
           case "pause": {
             if (this.onpause != null) {
               this.onpause(msg.p.paused)
+            }
+          } break;
+          case "plan": {
+            if (this.onplan != null) {
+              this.onplan(Plan.deserialize(msg.p.plan))
             }
           } break;
           default: {
@@ -266,7 +272,7 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
     };
   }, [paths, serialize(planOptions)]);
 
-  return [isPlanning, latestPlan];
+  return [isPlanning, latestPlan, setPlan];
 };
 
 const setPaths = (paths: Vec2[][]) => (dispatch: (a: any) => void) => {
@@ -718,6 +724,7 @@ function PlanOptions({state}: {state: State}) {
 
 function Root({driver}: {driver: Driver}) {
   const [state, dispatch] = useThunkReducer(reducer, initialState);
+  const [isPlanning, plan, setPlan] = usePlan(state.paths, state.planOptions);
   useEffect(() => {
     driver.onprogress = (motionIdx: number) => {
       dispatch({type: "SET_PROGRESS", motionIdx});
@@ -733,7 +740,10 @@ function Root({driver}: {driver: Driver}) {
     };
     driver.onpause = (paused: boolean) => {
       dispatch({type: "SET_PAUSED", value: paused});
-    }
+    };
+    driver.onplan = (plan: Plan) => {
+      setPlan(plan);
+    };
     const ondrop = (e: DragEvent) => {
       e.preventDefault();
       const item = e.dataTransfer.items[0];
@@ -765,11 +775,10 @@ function Root({driver}: {driver: Driver}) {
     return () => {
       document.body.removeEventListener("drop", ondrop);
       document.body.removeEventListener("dragover", ondragover);
+      document.body.removeEventListener("dragleave", ondragleave);
       document.removeEventListener("paste", onpaste);
     };
   });
-
-  const [isPlanning, plan] = usePlan(state.paths, state.planOptions);
 
   const previewArea = useRef(null);
   const previewSize = useComponentSize(previewArea);
@@ -811,7 +820,7 @@ function Root({driver}: {driver: Driver}) {
           previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}}
           plan={plan}
         />
-        {state.paths ? null : <DragTarget/>}
+        {plan ? null : <DragTarget/>}
       </div>
     </div>
   </DispatchContext.Provider>;

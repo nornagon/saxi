@@ -26,6 +26,8 @@ export function startServer(port: number, device: string | null = null, enableCo
   let cancelRequested = false;
   let unpaused: Promise<void> | null = null;
   let signalUnpause: () => void | null = null;
+  let motionIdx: number | null = null;
+  let currentPlan: Plan | null = null;
 
   wss.on("connection", (ws) => {
     clients.push(ws);
@@ -47,6 +49,13 @@ export function startServer(port: number, device: string | null = null, enableCo
     });
 
     ws.send(JSON.stringify({c: "dev", p: {path: ebb ? ebb.port.path : null}}));
+    if (motionIdx != null) {
+      ws.send(JSON.stringify({c: "progress", p: {motionIdx}}));
+    }
+    if (currentPlan != null) {
+      ws.send(JSON.stringify({c: "plan", p: {plan: currentPlan}}));
+    }
+    ws.send(JSON.stringify({c: "pause", p: {paused: !!unpaused}}));
 
     ws.on("close", () => {
       clients = clients.filter((w) => w !== ws);
@@ -55,6 +64,7 @@ export function startServer(port: number, device: string | null = null, enableCo
 
   app.post("/plot", async (req, res) => {
     const plan = Plan.deserialize(req.body);
+    currentPlan = req.body;
     console.log(`Received plan of estimated duration ${formatDuration(plan.duration())}`);
     console.log(ebb != null ? "Beginning plot..." : "Simulating plot...");
     res.status(200).end();
@@ -154,23 +164,26 @@ export function startServer(port: number, device: string | null = null, enableCo
   };
 
   async function doPlot(plotter: Plotter, plan: Plan): Promise<void> {
-    const firstPenMotion = (plan.motions.find((x) => x instanceof PenMotion) as PenMotion);
-    await plotter.prePlot(firstPenMotion.initialPos);
-
     cancelRequested = false;
     unpaused = null;
     signalUnpause = null;
-    let i = 0;
+    motionIdx = 0;
+
+    const firstPenMotion = (plan.motions.find((x) => x instanceof PenMotion) as PenMotion);
+    await plotter.prePlot(firstPenMotion.initialPos);
+
     for (const motion of plan.motions) {
-      broadcast({c: "progress", p: {motionIdx: i}});
-      await plotter.executeMotion(motion, [i, plan.motions.length]);
+      broadcast({c: "progress", p: {motionIdx}});
+      await plotter.executeMotion(motion, [motionIdx, plan.motions.length]);
       if (unpaused) {
         await unpaused;
         broadcast({c: "pause", p: {paused: false}});
       }
       if (cancelRequested) { break; }
-      i += 1;
+      motionIdx += 1;
     }
+    motionIdx = null;
+    currentPlan = null;
     if (cancelRequested) {
       await plotter.postCancel();
       broadcast({c: "cancelled"});
