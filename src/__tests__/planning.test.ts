@@ -8,7 +8,7 @@ describe("plan", () => {
 
   function xyMotions(plan: Plan) {
     let curPenPos = 0;
-    const motions: {from: Vec2, to: Vec2, penPos: number}[] = [];
+    const motions: {from: Vec2; to: Vec2; penPos: number}[] = [];
     for (const m of plan.motions) {
       if (m instanceof PenMotion) {
         curPenPos = m.finalPos;
