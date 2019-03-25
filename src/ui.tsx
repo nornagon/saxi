@@ -578,7 +578,7 @@ function PlotButtons(
           className={`plot-button ${state.progress != null ? "plot-button--plotting" : ""}`}
           disabled={plan == null || state.progress != null}
           onClick={() => plot(plan)}>
-          {plan && state.progress ? "Plotting..." : "Plot"}
+          {plan && state.progress != null ? "Plotting..." : "Plot"}
         </button>
     }
     <div className={`button-row`}>
