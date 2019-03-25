@@ -40,3 +40,39 @@ describe("EBB.list", () => {
     expect(await EBB.list()).toEqual(["/dev/ebb"])
   })
 })
+
+describe("EBB", () => {
+  afterEach(() => {
+    MockBinding.reset();
+  })
+
+  type TestPort = SerialPort & {
+    binding: SerialPort.BaseBinding & {
+      recording: Buffer;
+      emitData: (data: Buffer) => void;
+    }
+  };
+
+  async function openTestPort(path = '/dev/ebb'): Promise<TestPort> {
+    MockBinding.createPort(path, {record: true});
+    const port = new SerialPort(path);
+    await new Promise(resolve => port.on('open', resolve));
+    return port as any;
+  }
+
+  it("firmware version", async () => {
+    const port = await openTestPort();
+    const ebb = new EBB(port);
+    port.binding.emitData(Buffer.from('aoeu\r\n'));
+    expect(await ebb.firmwareVersion()).toEqual('aoeu');
+    expect(port.binding.recording).toEqual(Buffer.from("V\r"));
+  })
+
+  it("enable motors", async () => {
+    const port = await openTestPort();
+    const ebb = new EBB(port);
+    port.binding.emitData(Buffer.from('OK\r\n'));
+    await ebb.enableMotors(2);
+    expect(port.binding.recording).toEqual(Buffer.from("EM,2,2\r"));
+  })
+})
