@@ -318,6 +318,13 @@ summary {
   background-color: var(--teal-light);
 }
 
+.button-row {
+  display: flex;
+}
+.button-row > *:not(:first-child) {
+  margin-left: 10px;
+}
+
 .cancel-button {
   background-color: white;
   color: var(--purple-light);

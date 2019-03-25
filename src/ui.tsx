@@ -581,16 +581,18 @@ function PlotButtons(
           {plan && state.progress ? "Plotting..." : "Plot"}
         </button>
     }
-    <button
-      className={`cancel-button ${state.progress != null ? "cancel-button--active" : ""}`}
-      onClick={cancel}
-      disabled={plan == null || state.progress == null}
-    >Cancel</button>
-    <button
-      className={`cancel-button ${state.progress != null ? "cancel-button--active" : ""}`}
-      onClick={state.paused ? resume : pause}
-      disabled={plan == null || state.progress == null}
-    >{state.paused ? "Resume" : "Pause"}</button>
+    <div className={`button-row`}>
+      <button
+        className={`cancel-button ${state.progress != null ? "cancel-button--active" : ""}`}
+        onClick={state.paused ? resume : pause}
+        disabled={plan == null || state.progress == null}
+      >{state.paused ? "Resume" : "Pause"}</button>
+      <button
+        className={`cancel-button ${state.progress != null ? "cancel-button--active" : ""}`}
+        onClick={cancel}
+        disabled={plan == null || state.progress == null}
+      >Cancel</button>
+    </div>
   </div>;
 }
 
