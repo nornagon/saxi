@@ -6,7 +6,7 @@ import SerialPort from "serialport";
 import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
 import { EBB } from "./ebb";
-import { Device, PenMotion, Plan } from "./planning";
+import { Device, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 
 export function startServer(port: number, device: string | null = null, enableCors: boolean = false) {
@@ -68,7 +68,7 @@ export function startServer(port: number, device: string | null = null, enableCo
     }
 
     try {
-      await (ebb != null ? doPlot(plan) : simulatePlot(plan));
+      await doPlot(ebb != null ? realPlotter : simPlotter, plan);
       const end = Date.now();
       console.log(`Plot took ${formatDuration((end - begin) / 1000)}`);
     } finally {
@@ -117,7 +117,7 @@ export function startServer(port: number, device: string | null = null, enableCo
 
   interface Plotter {
     prePlot: (initialPenHeight: number) => Promise<void>;
-    executeMotion: (m: Motion) => Promise<void>;
+    executeMotion: (m: Motion, progress: [number, number]) => Promise<void>;
     postCancel: () => Promise<void>;
     postPlot: () => Promise<void>;
   };
@@ -127,7 +127,7 @@ export function startServer(port: number, device: string | null = null, enableCo
       await ebb.enableMotors(2);
       await ebb.setPenHeight(initialPenHeight, 1000, 1000);
     },
-    async executeMotion(motion: Motion): Promise<void> {
+    async executeMotion(motion: Motion, _progress: [number, number]): Promise<void> {
       await ebb.executeMotion(motion);
     },
     async postCancel(): Promise<void> {
@@ -137,48 +137,33 @@ export function startServer(port: number, device: string | null = null, enableCo
       await ebb.waitUntilMotorsIdle();
       await ebb.disableMotors();
     },
-  }
+  };
 
-
-  async function doPlot(plan: Plan): Promise<void> {
-    await ebb.enableMotors(2);
-    const firstPenMotion = (plan.motions.find((x) => x instanceof PenMotion) as PenMotion);
-    await ebb.setPenHeight(firstPenMotion.initialPos, 1000, 1000);
-
-    cancelRequested = false;
-    unpaused = null;
-    signalUnpause = null;
-    let i = 0;
-    for (const motion of plan.motions) {
-      broadcast({c: "progress", p: {motionIdx: i}});
-      await ebb.executeMotion(motion);
-      if (unpaused) {
-        await unpaused;
-        broadcast({c: "pause", p: {paused: false}});
-      }
-      if (cancelRequested) { break; }
-      i += 1;
-    }
-    if (cancelRequested) {
-      await ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000);
-      broadcast({c: "cancelled"});
-      cancelRequested = false;
-    } else {
-      broadcast({c: "finished"});
-    }
-    await ebb.waitUntilMotorsIdle();
-    await ebb.disableMotors();
-  }
-
-  async function simulatePlot(plan: Plan): Promise<void> {
-    cancelRequested = false;
-    unpaused = null;
-    signalUnpause = null;
-    let i = 0;
-    for (const motion of plan.motions) {
-      console.log(`Motion ${i + 1}/${plan.motions.length}`);
-      broadcast({c: "progress", p: {motionIdx: i}});
+  const simPlotter: Plotter = {
+    async prePlot(_initialPenHeight: number): Promise<void> {
+    },
+    async executeMotion(motion: Motion, progress: [number, number]): Promise<void> {
+      console.log(`Motion ${progress[0] + 1}/${progress[1]}`);
       await new Promise((resolve) => setTimeout(resolve, motion.duration() * 1000));
+    },
+    async postCancel(): Promise<void> {
+      console.log("Plot cancelled");
+    },
+    async postPlot(): Promise<void> {
+    },
+  };
+
+  async function doPlot(plotter: Plotter, plan: Plan): Promise<void> {
+    const firstPenMotion = (plan.motions.find((x) => x instanceof PenMotion) as PenMotion);
+    await plotter.prePlot(firstPenMotion.initialPos);
+
+    cancelRequested = false;
+    unpaused = null;
+    signalUnpause = null;
+    let i = 0;
+    for (const motion of plan.motions) {
+      broadcast({c: "progress", p: {motionIdx: i}});
+      await plotter.executeMotion(motion, [i, plan.motions.length]);
       if (unpaused) {
         await unpaused;
         broadcast({c: "pause", p: {paused: false}});
@@ -187,11 +172,13 @@ export function startServer(port: number, device: string | null = null, enableCo
       i += 1;
     }
     if (cancelRequested) {
+      await plotter.postCancel();
       broadcast({c: "cancelled"});
       cancelRequested = false;
     } else {
       broadcast({c: "finished"});
     }
+    await plotter.postPlot();
   }
 
   return new Promise((resolve) => {
