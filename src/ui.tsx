@@ -234,6 +234,7 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
     }
   }
 
+  const lastPaths = useRef(null);
   const lastPlan = useRef(null);
   const lastPlanOptions = useRef(null);
 
@@ -241,7 +242,7 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
     if (!paths) {
       return;
     }
-    if (lastPlan.current != null) {
+    if (lastPlan.current != null && lastPaths.current === paths) {
       const rejiggered = attemptRejigger(lastPlanOptions.current, planOptions, lastPlan.current);
       if (rejiggered) {
         setPlan(rejiggered);
@@ -250,6 +251,7 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
         return;
       }
     }
+    lastPaths.current = paths;
     const worker = new (PlanWorker as any)();
     setIsPlanning(true);
     console.time("posting to worker");
