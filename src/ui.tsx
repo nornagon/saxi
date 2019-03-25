@@ -43,6 +43,8 @@ const defaultPlanOptions: PlanOptions = {
 const initialState = {
   connected: true,
 
+  paused: false,
+
   deviceInfo: null as DeviceInfo | null,
 
   // UI state
@@ -69,6 +71,8 @@ function reducer(state: State, action: any): State {
       return {...state, planOptions: {...state.planOptions, ...action.value}};
     case "SET_DEVICE_INFO":
       return {...state, deviceInfo: action.value};
+    case "SET_PAUSED":
+      return {...state, paused: action.value};
     case "SET_PATHS":
       const {paths, layers, selectedLayers} = action;
       return {...state, paths, layers, planOptions: {...state.planOptions, selectedLayers}};
@@ -97,6 +101,7 @@ class Driver {
   public oncancelled: () => void | null;
   public onfinished: () => void | null;
   public ondevinfo: (devInfo: DeviceInfo) => void | null;
+  public onpause: (paused: boolean) => void | null;
   public onconnectionchange: (connected: boolean) => void | null;
 
   private socket: WebSocket;
@@ -119,30 +124,35 @@ class Driver {
         switch (msg.c) {
           case "pong": {
             // nothing
-          }            break;
+          } break;
           case "progress": {
             if (this.onprogress != null) {
               this.onprogress(msg.p.motionIdx);
             }
-          }                break;
+          } break;
           case "cancelled": {
             if (this.oncancelled != null) {
               this.oncancelled();
             }
-          }                 break;
+          } break;
           case "finished": {
             if (this.onfinished != null) {
               this.onfinished();
             }
-          }                break;
+          } break;
           case "dev": {
             if (this.ondevinfo != null) {
               this.ondevinfo(msg.p);
             }
-          }           break;
+          } break;
+          case "pause": {
+            if (this.onpause != null) {
+              this.onpause(msg.p.paused)
+            }
+          } break;
           default: {
             console.log("Unknown message from server:", msg);
-          }        break;
+          } break;
         }
       }
     });
@@ -170,6 +180,14 @@ class Driver {
 
   public cancel() {
     fetch("/cancel", { method: "POST" });
+  }
+
+  public pause() {
+    fetch("/pause", { method: "POST" });
+  }
+
+  public resume() {
+    fetch("/resume", { method: "POST" });
   }
 
   public send(msg: object) {
@@ -538,6 +556,12 @@ function PlotButtons(
   function cancel() {
     driver.cancel();
   }
+  function pause() {
+    driver.pause();
+  }
+  function resume() {
+    driver.resume();
+  }
   function plot(plan: Plan) {
     driver.plot(plan);
   }
@@ -562,6 +586,11 @@ function PlotButtons(
       onClick={cancel}
       disabled={plan == null || state.progress == null}
     >Cancel</button>
+    <button
+      className={`cancel-button ${state.progress != null ? "cancel-button--active" : ""}`}
+      onClick={state.paused ? resume : pause}
+      disabled={plan == null || state.progress == null}
+    >{state.paused ? "Resume" : "Pause"}</button>
   </div>;
 }
 
@@ -700,6 +729,9 @@ function Root({driver}: {driver: Driver}) {
     driver.ondevinfo = (devInfo: DeviceInfo) => {
       dispatch({type: "SET_DEVICE_INFO", value: devInfo});
     };
+    driver.onpause = (paused: boolean) => {
+      dispatch({type: "SET_PAUSED", value: paused});
+    }
     const ondrop = (e: DragEvent) => {
       e.preventDefault();
       const item = e.dataTransfer.items[0];

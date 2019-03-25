@@ -24,6 +24,8 @@ export function startServer(port: number, device: string | null = null, enableCo
   let ebb: EBB | null;
   let clients: WebSocket[] = [];
   let cancelRequested = false;
+  let unpaused: Promise<void> | null = null;
+  let signalUnpause: () => void | null = null;
 
   wss.on("connection", (ws) => {
     clients.push(ws);
@@ -78,8 +80,30 @@ export function startServer(port: number, device: string | null = null, enableCo
 
   app.post("/cancel", (req, res) => {
     cancelRequested = true;
+    if (unpaused) {
+      signalUnpause();
+    }
+    unpaused = signalUnpause = null;
     res.status(200).end();
   });
+
+  app.post("/pause", (req, res) => {
+    if (!unpaused) {
+      unpaused = new Promise(resolve => {
+        signalUnpause = resolve;
+      });
+      broadcast({c: "pause", p: {paused: true}});
+    }
+    res.status(200).end();
+  });
+
+  app.post("/resume", (req, res) => {
+    if (signalUnpause) {
+      signalUnpause();
+      signalUnpause = unpaused = null;
+    }
+    res.status(200).end();
+  })
 
   function broadcast(msg: any) {
     clients.forEach((ws) => {
@@ -91,16 +115,47 @@ export function startServer(port: number, device: string | null = null, enableCo
     });
   }
 
+  interface Plotter {
+    prePlot: (initialPenHeight: number) => Promise<void>;
+    executeMotion: (m: Motion) => Promise<void>;
+    postCancel: () => Promise<void>;
+    postPlot: () => Promise<void>;
+  };
+
+  const realPlotter: Plotter = {
+    async prePlot(initialPenHeight: number): Promise<void> {
+      await ebb.enableMotors(2);
+      await ebb.setPenHeight(initialPenHeight, 1000, 1000);
+    },
+    async executeMotion(motion: Motion): Promise<void> {
+      await ebb.executeMotion(motion);
+    },
+    async postCancel(): Promise<void> {
+      await ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000);
+    },
+    async postPlot(): Promise<void> {
+      await ebb.waitUntilMotorsIdle();
+      await ebb.disableMotors();
+    },
+  }
+
+
   async function doPlot(plan: Plan): Promise<void> {
     await ebb.enableMotors(2);
     const firstPenMotion = (plan.motions.find((x) => x instanceof PenMotion) as PenMotion);
     await ebb.setPenHeight(firstPenMotion.initialPos, 1000, 1000);
 
     cancelRequested = false;
+    unpaused = null;
+    signalUnpause = null;
     let i = 0;
     for (const motion of plan.motions) {
       broadcast({c: "progress", p: {motionIdx: i}});
       await ebb.executeMotion(motion);
+      if (unpaused) {
+        await unpaused;
+        broadcast({c: "pause", p: {paused: false}});
+      }
       if (cancelRequested) { break; }
       i += 1;
     }
@@ -117,11 +172,17 @@ export function startServer(port: number, device: string | null = null, enableCo
 
   async function simulatePlot(plan: Plan): Promise<void> {
     cancelRequested = false;
+    unpaused = null;
+    signalUnpause = null;
     let i = 0;
     for (const motion of plan.motions) {
       console.log(`Motion ${i + 1}/${plan.motions.length}`);
       broadcast({c: "progress", p: {motionIdx: i}});
       await new Promise((resolve) => setTimeout(resolve, motion.duration() * 1000));
+      if (unpaused) {
+        await unpaused;
+        broadcast({c: "pause", p: {paused: false}});
+      }
       if (cancelRequested) { break; }
       i += 1;
     }
