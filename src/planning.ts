@@ -59,8 +59,8 @@ export const Device = {
     // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
     // Units: 83ns resolution pwm output.
     // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
-    penServoMin: 7500,
-    penServoMax: 28000,
+    penServoMin: 7500,  // pen down
+    penServoMax: 28000, // pen up
 
     penPctToPos(pct: number): number {
       const t = pct / 100.0;

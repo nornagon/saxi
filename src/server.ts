@@ -172,10 +172,15 @@ export function startServer(port: number, device: string | null = null, enableCo
     const firstPenMotion = (plan.motions.find((x) => x instanceof PenMotion) as PenMotion);
     await plotter.prePlot(firstPenMotion.initialPos);
 
+    let penIsUp = true;
+
     for (const motion of plan.motions) {
       broadcast({c: "progress", p: {motionIdx}});
       await plotter.executeMotion(motion, [motionIdx, plan.motions.length]);
-      if (unpaused) {
+      if (motion instanceof PenMotion) {
+        penIsUp = motion.initialPos < motion.finalPos;
+      }
+      if (unpaused && penIsUp) {
         await unpaused;
         broadcast({c: "pause", p: {paused: false}});
       }
