@@ -50,7 +50,7 @@ describe("EBB", () => {
     binding: SerialPort.BaseBinding & {
       recording: Buffer;
       emitData: (data: Buffer) => void;
-    }
+    };
   };
 
   async function openTestPort(path = '/dev/ebb'): Promise<TestPort> {
