@@ -276,11 +276,11 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
   return [isPlanning, latestPlan, setPlan];
 };
 
-const setPaths = (paths: Vec2[][]) => (dispatch: (a: any) => void) => {
+const setPaths = (paths: Vec2[][]) => {
   const strokes = new Set();
   for (const path of paths) { strokes.add((path as any).stroke); }
   const layers = Array.from(strokes).sort();
-  dispatch({type: "SET_PATHS", paths, layers, selectedLayers: new Set(layers)});
+  return {type: "SET_PATHS", paths, layers, selectedLayers: new Set(layers)};
 };
 
 function PenHeight({state, driver}: {state: State; driver: Driver}) {
