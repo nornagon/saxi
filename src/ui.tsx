@@ -1,11 +1,10 @@
 import useComponentSize from "@rehooks/component-size";
-import React, { ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import React, { ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useReducer } from "react";
 import ReactDOM from "react-dom";
 
 import {flattenSVG} from "flatten-svg";
 import {PaperSize} from "./paper-size";
 import {Device, Plan, PlanOptions, XYMotion} from "./planning";
-import {useThunkReducer} from "./thunk-reducer";
 import {formatDuration} from "./util";
 import {Vec2} from "./vec";
 
@@ -725,7 +724,7 @@ function PlanOptions({state}: {state: State}) {
 }
 
 function Root({driver}: {driver: Driver}) {
-  const [state, dispatch] = useThunkReducer(reducer, initialState);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const [isPlanning, plan, setPlan] = usePlan(state.paths, state.planOptions);
   useEffect(() => {
     driver.onprogress = (motionIdx: number) => {
