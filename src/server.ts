@@ -49,13 +49,13 @@ export function startServer(port: number, device: string | null = null, enableCo
     });
 
     ws.send(JSON.stringify({c: "dev", p: {path: ebb ? ebb.port.path : null}}));
+    ws.send(JSON.stringify({c: "pause", p: {paused: !!unpaused}}));
     if (motionIdx != null) {
       ws.send(JSON.stringify({c: "progress", p: {motionIdx}}));
     }
     if (currentPlan != null) {
       ws.send(JSON.stringify({c: "plan", p: {plan: currentPlan}}));
     }
-    ws.send(JSON.stringify({c: "pause", p: {paused: !!unpaused}}));
 
     ws.on("close", () => {
       clients = clients.filter((w) => w !== ws);
