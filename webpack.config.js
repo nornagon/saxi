@@ -1,7 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
-module.exports = {
+module.exports = (env, {mode = 'development'}) => ({
   entry: './src/ui.tsx',
   output: {
     filename: 'main.js',
@@ -41,5 +41,5 @@ module.exports = {
       template: './src/index.html',
     })
   ],
-  devtool: 'inline-source-map',
-};
+  devtool: mode === 'development' ? 'inline-source-map' : 'source-map',
+});
