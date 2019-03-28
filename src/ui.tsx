@@ -60,6 +60,11 @@ const initialState = {
   progress: (null as number | null),
 };
 
+// Update the initial state with previously persisted settings (if present)
+const persistedPlanOptions = JSON.parse(window.localStorage.getItem("planOptions")) || {};
+initialState.planOptions = {...initialState.planOptions, ...persistedPlanOptions};
+initialState.planOptions.paperSize = new PaperSize(initialState.planOptions.paperSize.size);
+
 type State = typeof initialState;
 
 const DispatchContext = React.createContext(null);
@@ -603,6 +608,20 @@ function PlotButtons(
   </div>;
 }
 
+function ResetToDefaultsButton() {
+  const dispatch = useContext(DispatchContext);
+  const onClick = () => {
+    // Clear all user settings that have been saved and reset to the defaults
+    window.localStorage.removeItem("planOptions");
+    dispatch({type: "SET_PLAN_OPTION", value: {...defaultPlanOptions}});
+  };
+
+  return <div>
+    <button onClick={onClick}>Reset all options</button>
+  </div>;
+
+}
+
 function PlanOptions({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
   return <div>
@@ -727,6 +746,9 @@ function Root({driver}: {driver: Driver}) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPlanning, plan, setPlan] = usePlan(state.paths, state.planOptions);
   useEffect(() => {
+    window.localStorage.setItem("planOptions", JSON.stringify(state.planOptions));
+  }, [state.planOptions]);
+  useEffect(() => {
     driver.onprogress = (motionIdx: number) => {
       dispatch({type: "SET_PROGRESS", motionIdx});
     };
@@ -794,6 +816,7 @@ function Root({driver}: {driver: Driver}) {
         <div className="section-body">
           <PenHeight state={state} driver={driver} />
           <MotorControl driver={driver} />
+          <ResetToDefaultsButton />
         </div>
         <div className="section-header">paper</div>
         <div className="section-body">
