@@ -198,6 +198,26 @@ button:not(:disabled):active {
   color: var(--purple-dark);
 }
 
+/* button-link is a button element that looks like a link */
+button.button-link {
+  display: block;
+  padding: 0;
+  border: none;
+  font-size: 10px;
+  text-decoration: none;
+  background-color: transparent;
+  box-shadow: none;
+  font-weight: 400;
+}
+
+button.button-link:hover,
+button.button-link:active,
+button.button-link:focus {
+  box-shadow: none;
+  background-color: transparent;
+  text-decoration: underline;
+}
+
 select {
   height: 30px;
   appearance: none;

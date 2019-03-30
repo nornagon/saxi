@@ -616,9 +616,7 @@ function ResetToDefaultsButton() {
     dispatch({type: "SET_PLAN_OPTION", value: {...defaultPlanOptions}});
   };
 
-  return <div>
-    <button onClick={onClick}>reset all options</button>
-  </div>;
+  return <button className="button-link" onClick={onClick}>reset all options</button>;
 
 }
 
