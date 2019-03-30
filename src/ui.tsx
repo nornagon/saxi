@@ -617,7 +617,7 @@ function ResetToDefaultsButton() {
   };
 
   return <div>
-    <button onClick={onClick}>Reset all options</button>
+    <button onClick={onClick}>reset all options</button>
   </div>;
 
 }
