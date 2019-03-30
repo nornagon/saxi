@@ -317,14 +317,27 @@ summary {
 }
 
 .horizontal-labels label {
-  display: flex;
+  display: block;
+  position: relative;
 }
-.horizontal-labels label > :first-child {
-  width: 32px;
-  flex: 0;
+.horizontal-labels label::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 28px;
+  border-right: 1px solid var(--purple);
 }
-.horizontal-labels label > input {
-  flex: 1;
+
+.horizontal-labels img {
+  position: absolute;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  border-right: 1px solid var(--purple);
+  /*opacity: 0.5;*/
+}
+.horizontal-labels input {
+  padding-left: 32px;
 }
 
 /* PLOT section */

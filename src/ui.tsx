@@ -625,7 +625,7 @@ function PlanOptions({state}: {state: State}) {
   return <div>
     <div className="horizontal-labels">
       <label title="point-joining radius (mm)" >
-        <img src={pointJoinRadiusIcon} style={{height: 28}} alt="point-joining radius (mm)"/>
+        <img src={pointJoinRadiusIcon} alt="point-joining radius (mm)"/>
         <input
           type="number"
           value={state.planOptions.pointJoinRadius}
@@ -635,7 +635,7 @@ function PlanOptions({state}: {state: State}) {
         />
       </label>
       <label title="path-joining radius (mm)">
-        <img src={pathJoinRadiusIcon} style={{height: 28}} alt="path-joining radius (mm)" />
+        <img src={pathJoinRadiusIcon} alt="path-joining radius (mm)" />
         <input
           type="number"
           value={state.planOptions.pathJoinRadius}
