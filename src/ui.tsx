@@ -623,6 +623,14 @@ function ResetToDefaultsButton() {
 function PlanOptions({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
   return <div>
+    <label className="flex-checkbox" title="Re-order paths to minimize pen-up travel time">
+      <input
+        type="checkbox"
+        checked={state.planOptions.sortPaths}
+        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: Number(e.target.checked)}})}
+      />
+      sort paths
+    </label>
     <div className="horizontal-labels">
       <label title="point-joining radius (mm)" >
         <img src={pointJoinRadiusIcon} alt="point-joining radius (mm)"/>
@@ -646,16 +654,6 @@ function PlanOptions({state}: {state: State}) {
       </label>
     </div>
     <div>
-      <div>
-        <label className="flex-checkbox" title="Re-order paths to minimize pen-up travel time">
-          <input
-            type="checkbox"
-            checked={state.planOptions.sortPaths}
-            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: Number(e.target.checked)}})}
-          />
-          sort paths
-        </label>
-      </div>
       <label title="Remove paths that are shorter than this length (in mm)">
         minimum path length
         <input
