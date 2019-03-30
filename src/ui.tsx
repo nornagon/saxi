@@ -738,8 +738,8 @@ function PlanOptions({state}: {state: State}) {
             min="0"
             onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDropDuration: Number(e.target.value)}})}
           />
-        </div>
-      </label>
+        </label>
+      </div>
     </div>
   </div>;
 }
