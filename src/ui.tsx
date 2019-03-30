@@ -666,26 +666,28 @@ function PlanOptions({state}: {state: State}) {
           onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {minimumPathLength: Number(e.target.value)}})}
         />
       </label>
-      <label>
-        pen-down acceleration (mm/s<sup>2</sup>)
-        <input
-          type="number"
-          value={state.planOptions.penDownAcceleration}
-          step="0.1"
-          min="0"
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDownAcceleration: Number(e.target.value)}})}
-        />
-      </label>
-      <label>
-        pen-down max velocity (mm/s)
-        <input
-          type="number"
-          value={state.planOptions.penDownMaxVelocity}
-          step="0.1"
-          min="0"
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDownMaxVelocity: Number(e.target.value)}})}
-        />
-      </label>
+      <div className="flex">
+        <label title="Acceleration when the pen is down (in mm/s^2)">
+          down acc. (mm/s<sup>2</sup>)
+          <input
+            type="number"
+            value={state.planOptions.penDownAcceleration}
+            step="0.1"
+            min="0"
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDownAcceleration: Number(e.target.value)}})}
+          />
+        </label>
+        <label title="Maximum velocity when the pen is down (in mm/s)">
+          down max vel. (mm/s)
+          <input
+            type="number"
+            value={state.planOptions.penDownMaxVelocity}
+            step="0.1"
+            min="0"
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDownMaxVelocity: Number(e.target.value)}})}
+          />
+        </label>
+      </div>
       <label>
         cornering factor
         <input
@@ -696,45 +698,49 @@ function PlanOptions({state}: {state: State}) {
           onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDownCorneringFactor: Number(e.target.value)}})}
         />
       </label>
-      <label>
-        pen-up acceleration (mm/s<sup>2</sup>)
-        <input
-          type="number"
-          value={state.planOptions.penUpAcceleration}
-          step="0.1"
-          min="0"
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penUpAcceleration: Number(e.target.value)}})}
-        />
-      </label>
-      <label>
-        pen-up max velocity (mm/s)
-        <input
-          type="number"
-          value={state.planOptions.penUpMaxVelocity}
-          step="0.1"
-          min="0"
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penUpMaxVelocity: Number(e.target.value)}})}
-        />
-      </label>
-      <label>
-        pen lift duration (s)
-        <input
-          type="number"
-          value={state.planOptions.penLiftDuration}
-          step="0.01"
-          min="0"
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penLiftDuration: Number(e.target.value)}})}
-        />
-      </label>
-      <label>
-        pen drop duration (s)
-        <input
-          type="number"
-          value={state.planOptions.penDropDuration}
-          step="0.01"
-          min="0"
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDropDuration: Number(e.target.value)}})}
-        />
+      <div className="flex">
+        <label title="Acceleration when the pen is up (in mm/s^2)">
+          up acc. (mm/s<sup>2</sup>)
+          <input
+            type="number"
+            value={state.planOptions.penUpAcceleration}
+            step="0.1"
+            min="0"
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penUpAcceleration: Number(e.target.value)}})}
+          />
+        </label>
+        <label title="Maximum velocity when the pen is up (in mm/s)">
+          up max vel. (mm/s)
+          <input
+            type="number"
+            value={state.planOptions.penUpMaxVelocity}
+            step="0.1"
+            min="0"
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penUpMaxVelocity: Number(e.target.value)}})}
+          />
+        </label>
+      </div>
+      <div className="flex">
+        <label title="How long the pen takes to lift, in seconds">
+          pen lift duration (s)
+          <input
+            type="number"
+            value={state.planOptions.penLiftDuration}
+            step="0.01"
+            min="0"
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penLiftDuration: Number(e.target.value)}})}
+          />
+        </label>
+        <label title="How long the pen takes to drop, in seconds">
+          pen drop duration (s)
+          <input
+            type="number"
+            value={state.planOptions.penDropDuration}
+            step="0.01"
+            min="0"
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDropDuration: Number(e.target.value)}})}
+          />
+        </div>
       </label>
     </div>
   </div>;

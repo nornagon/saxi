@@ -229,8 +229,10 @@ select[multiple]:focus option:checked {
   color: white;
 }
 
-.flex button {
+.flex button,
+.flex label {
   width: calc(50% - 0.25rem);
+  align-self: flex-end;
 }
 
 /* PEN section */
