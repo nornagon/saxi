@@ -89,16 +89,12 @@ path {
 }
 
 .drag-target-message {
-  width: 50%;
-  height: 50%;
-  border: 8px dashed grey;
   display: flex;
   justify-content: center;
   align-items: center;
   color: whitesmoke;
-  background: rgba(255,255,255,0.25);
   font-weight: bold;
-  font-size: 60px;
+  font-size: 36px;
 }
 
 .control-panel {
