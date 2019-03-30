@@ -647,7 +647,7 @@ function PlanOptions({state}: {state: State}) {
     </div>
     <div>
       <div>
-        <label title="Re-order paths to minimize pen-up travel time">
+        <label className="flex-checkbox" title="Re-order paths to minimize pen-up travel time">
           <input
             type="checkbox"
             checked={state.planOptions.sortPaths}
