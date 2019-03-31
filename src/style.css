@@ -89,16 +89,12 @@ path {
 }
 
 .drag-target-message {
-  width: 50%;
-  height: 50%;
-  border: 8px dashed grey;
   display: flex;
   justify-content: center;
   align-items: center;
   color: whitesmoke;
-  background: rgba(255,255,255,0.25);
   font-weight: bold;
-  font-size: 60px;
+  font-size: 36px;
 }
 
 .control-panel {
@@ -171,6 +167,31 @@ input[type=number] {
   outline: none;
 }
 
+input[type=checkbox] {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  margin: 0 0.5rem 0 0;
+  border: 1px solid var(--purple);
+  background-color: white;
+  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type=checkbox]:checked:after {
+  display: block;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  bottom: 3px;
+  left: 3px;
+  content: '';
+  background-color: var(--purple);
+}
+
 button, select {
   width: 100%;
   margin-bottom: 0.5rem;
@@ -188,18 +209,39 @@ button, select {
 }
 
 button:not(:disabled):hover,
-select:not(:disabled):hover,
 button:not(:disabled):focus,
+select:not(:disabled):hover,
 select:focus,
 input[type=number]:hover,
-input[type=number]:focus {
-  box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.25);
+input[type=number]:focus,
+input[type=checkbox]:focus {
+  box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.25);
 }
 
 button:not(:disabled):active {
-  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.25), inset 1px 1px 1px rgba(0, 0, 0, 0.1);
+  box-shadow: 0px 0px 1px rgba(0, 0, 0, 0.25), inset 2px 2px 5px rgba(0, 0, 0, 0.2);
   background-color: #fafafa;
   color: var(--purple-dark);
+}
+
+/* button-link is a button element that looks like a link */
+button.button-link {
+  display: block;
+  padding: 0;
+  border: none;
+  font-size: 10px;
+  text-decoration: none;
+  background-color: transparent;
+  box-shadow: none;
+  font-weight: 400;
+}
+
+button.button-link:hover,
+button.button-link:active,
+button.button-link:focus {
+  box-shadow: none;
+  background-color: transparent;
+  text-decoration: underline;
 }
 
 select {
@@ -213,8 +255,17 @@ select[multiple]:focus option:checked {
   color: white;
 }
 
-.flex button {
+.flex button,
+.flex label {
   width: calc(50% - 0.25rem);
+  align-self: flex-end;
+}
+
+.flex-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.5rem;
 }
 
 /* PEN section */
@@ -268,15 +319,32 @@ summary {
   cursor: pointer;
 }
 
+summary:focus {
+  color: var(--purple-dark);
+}
+
 .horizontal-labels label {
-  display: flex;
+  display: block;
+  position: relative;
 }
-.horizontal-labels label > :first-child {
-  width: 32px;
-  flex: 0;
+.horizontal-labels label::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 28px;
+  border-right: 1px solid var(--purple);
 }
-.horizontal-labels label > input {
-  flex: 1;
+
+.horizontal-labels img {
+  position: absolute;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  border-right: 1px solid var(--purple);
+  /*opacity: 0.5;*/
+}
+.horizontal-labels input {
+  padding-left: 32px;
 }
 
 /* PLOT section */
