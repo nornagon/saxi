@@ -656,6 +656,14 @@ function PlanOptions({state}: {state: State}) {
       />
       fit page
     </label>
+    <label className="flex-checkbox" title="Split into layers according to group ID, instead of stroke">
+      <input
+        type="checkbox"
+        checked={state.planOptions.layerMode === 'group'}
+        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {layerMode: e.target.checked ? 'group' : 'stroke'}})}
+      />
+      layer by group
+    </label>
     <div className="horizontal-labels">
       <label title="point-joining radius (mm)" >
         <img src={pointJoinRadiusIcon} alt="point-joining radius (mm)"/>
