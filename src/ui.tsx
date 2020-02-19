@@ -35,6 +35,7 @@ const defaultPlanOptions: PlanOptions = {
   penLiftDuration: 0.12,
 
   sortPaths: true,
+  fitPage: true,
 
   minimumPathLength: 0,
 };
@@ -627,9 +628,17 @@ function PlanOptions({state}: {state: State}) {
       <input
         type="checkbox"
         checked={state.planOptions.sortPaths}
-        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: Number(e.target.checked)}})}
+        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: !!e.target.checked}})}
       />
       sort paths
+    </label>
+    <label className="flex-checkbox" title="Re-scale and position the image to fit on the page">
+      <input
+        type="checkbox"
+        checked={state.planOptions.fitPage}
+        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {fitPage: !!e.target.checked}})}
+      />
+      fit page
     </label>
     <div className="horizontal-labels">
       <label title="point-joining radius (mm)" >

@@ -17,7 +17,9 @@ function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   let paths = inPaths;
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
-  paths = scaleToPaper(paths, planOptions.paperSize, planOptions.marginMm);
+  if (planOptions.fitPage) {
+    paths = scaleToPaper(paths, planOptions.paperSize, planOptions.marginMm);
+  }
 
   // Rescaling loses the stroke info, so refer back to the original paths to
   // filter based on the stroke. Rescaling doesn't change the number or order
