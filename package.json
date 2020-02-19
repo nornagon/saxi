@@ -36,7 +36,7 @@
     "@types/node": "^10.12.18",
     "@types/react": "^16.7.20",
     "@types/react-dom": "^16.0.11",
-    "@types/serialport": "^7.0.1",
+    "@types/serialport": "^8.0.0",
     "@types/ws": "^6.0.1",
     "@types/yargs": "^12.0.8",
     "@typescript-eslint/eslint-plugin": "^1.5.0",

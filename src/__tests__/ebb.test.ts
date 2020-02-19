@@ -29,14 +29,12 @@ describe("EBB.list", () => {
   })
 
   it("returns a port that does look like an EBB", async () => {
-    MockBinding.createPort('/dev/ebb');
-    (await MockBinding.list())[0].manufacturer = "SchmalzHaus"
+    MockBinding.createPort('/dev/ebb', { manufacturer: "SchmalzHaus" });
     expect(await EBB.list()).toEqual(["/dev/ebb"])
   })
 
   it("handles 'SchmalzHaus LLC'", async () => {
-    MockBinding.createPort('/dev/ebb');
-    (await MockBinding.list())[0].manufacturer = "SchmalzHaus LLC"
+    MockBinding.createPort('/dev/ebb', { manufacturer: "SchmalzHaus LLC" });
     expect(await EBB.list()).toEqual(["/dev/ebb"])
   })
 })
