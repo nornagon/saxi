@@ -24,7 +24,11 @@ function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   // Rescaling loses the stroke info, so refer back to the original paths to
   // filter based on the stroke. Rescaling doesn't change the number or order
   // of the paths.
-  paths = paths.filter((path, i) => planOptions.selectedLayers.has((inPaths[i] as any).stroke));
+  if (planOptions.layerMode === 'group') {
+    paths = paths.filter((path, i) => planOptions.selectedGroupLayers.has((inPaths[i] as any).groupId));
+  } else {
+    paths = paths.filter((path, i) => planOptions.selectedStrokeLayers.has((inPaths[i] as any).stroke));
+  }
 
   if (planOptions.pointJoinRadius > 0) {
     paths = paths.map((p) => dedupPoints(p, planOptions.pointJoinRadius));

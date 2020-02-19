@@ -22,7 +22,9 @@ const defaultPlanOptions: PlanOptions = {
   pathJoinRadius: 0.5,
   paperSize: PaperSize.standard.ArchA.landscape,
   marginMm: 20,
-  selectedLayers: new Set(),
+  selectedGroupLayers: new Set(),
+  selectedStrokeLayers: new Set(),
+  layerMode: 'stroke',
 
   penDownAcceleration: 200,
   penDownMaxVelocity: 50,
@@ -55,7 +57,8 @@ const initialState = {
 
   // Info about the currently-loaded SVG.
   paths: null as Vec2[][] | null,
-  layers: [] as string[],
+  groupLayers: [] as string[],
+  strokeLayers: [] as string[],
 
   // While a plot is in progress, this will be the index of the current motion.
   progress: (null as number | null),
@@ -79,8 +82,8 @@ function reducer(state: State, action: any): State {
     case "SET_PAUSED":
       return {...state, paused: action.value};
     case "SET_PATHS":
-      const {paths, layers, selectedLayers} = action;
-      return {...state, paths, layers, planOptions: {...state.planOptions, selectedLayers}};
+      const {paths, strokeLayers, selectedStrokeLayers, groupLayers, selectedGroupLayers, layerMode} = action;
+      return {...state, paths, groupLayers, strokeLayers, planOptions: {...state.planOptions, selectedStrokeLayers, selectedGroupLayers, layerMode}};
     case "SET_PROGRESS":
       return {...state, progress: action.motionIdx};
     case "SET_CONNECTED":
@@ -284,9 +287,15 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
 
 const setPaths = (paths: Vec2[][]) => {
   const strokes = new Set();
-  for (const path of paths) { strokes.add((path as any).stroke); }
-  const layers = Array.from(strokes).sort();
-  return {type: "SET_PATHS", paths, layers, selectedLayers: new Set(layers)};
+  const groups = new Set();
+  for (const path of paths) {
+    strokes.add((path as any).stroke);
+    groups.add((path as any).groupId);
+  }
+  const layerMode = groups.size > 1 ? 'group' : 'stroke'
+  const groupLayers = Array.from(groups).sort()
+  const strokeLayers = Array.from(strokes).sort()
+  return {type: "SET_PATHS", paths, groupLayers, strokeLayers, selectedGroupLayers: new Set(groupLayers), selectedStrokeLayers: new Set(strokeLayers), layerMode};
 };
 
 function PenHeight({state, driver}: {state: State; driver: Driver}) {
@@ -537,22 +546,29 @@ function PlanPreview(
 
 function LayerSelector({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
-  if (state.layers.length <= 1) { return null; }
-  const layersChanged = (e: ChangeEvent) => {
-    const selectedLayers = new Set([...(e.target as HTMLSelectElement).selectedOptions].map((o) => o.value));
-    dispatch({type: "SET_PLAN_OPTION", value: {selectedLayers}});
-  };
+  const layers = state.planOptions.layerMode === 'group' ? state.groupLayers : state.strokeLayers
+  const selectedLayers = state.planOptions.layerMode === 'group' ? state.planOptions.selectedGroupLayers : state.planOptions.selectedStrokeLayers
+  if (layers.length <= 1) { return null; }
+  const layersChanged = state.planOptions.layerMode === 'group' ?
+    (e: ChangeEvent) => {
+      const selectedLayers = new Set([...(e.target as HTMLSelectElement).selectedOptions].map((o) => o.value));
+      dispatch({type: "SET_PLAN_OPTION", value: {selectedGroupLayers: selectedLayers}});
+    } :
+    (e: ChangeEvent) => {
+      const selectedLayers = new Set([...(e.target as HTMLSelectElement).selectedOptions].map((o) => o.value));
+      dispatch({type: "SET_PLAN_OPTION", value: {selectedStrokeLayers: selectedLayers}});
+    };
   return <div>
     <label>
       layers
       <select
         className="layer-select"
         multiple={true}
-        value={[...state.planOptions.selectedLayers]}
+        value={[...selectedLayers]}
         onChange={layersChanged}
         size={3}
       >
-        {state.layers.map((layer) => <option key={layer}>{layer}</option>)}
+        {layers.map((layer) => <option key={layer}>{layer}</option>)}
       </select>
     </label>
   </div>;
@@ -871,7 +887,7 @@ function DragTarget() {
 
 ReactDOM.render(<Root driver={Driver.connect()}/>, document.getElementById("app"));
 
-function withSVG<T>(svgString: string, fn: (svg: SVGSVGElement) => T) {
+function withSVG<T>(svgString: string, fn: (svg: SVGSVGElement) => T): T {
   const div = document.createElement("div");
   div.style.position = "absolute";
   div.style.left = "99999px";
@@ -889,6 +905,7 @@ function readSvg(svgString: string): Vec2[][] {
   return withSVG(svgString, flattenSVG).map((line) => {
     const a = line.points.map(([x, y]: [number, number]) => ({x, y}));
     (a as any).stroke = line.stroke;
+    (a as any).groupId = line.groupId;
     return a;
   });
 }
