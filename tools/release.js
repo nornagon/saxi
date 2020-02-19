@@ -21,6 +21,11 @@ const newVersion = semver.inc(package.version, args.level)
 const newPackageJson = {...package, version: newVersion}
 fs.writeFileSync(packageJsonPath, JSON.stringify(newPackageJson, null, 2) + "\n")
 
+const packageLockJsonPath = path.join(repositoryRoot, 'package-lock.json')
+const packageLock = JSON.parse(fs.readFileSync(packageLockJsonPath))
+const newPackageLockJson = {...packageLock, version: newVersion}
+fs.writeFileSync(packageLockJsonPath, JSON.stringify(newPackageLockJson, null, 2) + "\n")
+
 function git(args) {
   const r = child_process.spawnSync("git", args, {cwd: repositoryRoot})
   if (r.status !== 0) {
@@ -28,7 +33,7 @@ function git(args) {
     throw new Error(`Command failed: git ${args.join(" ")}`)
   }
 }
-git(["add", "package.json"])
+git(["add", "package.json", "package-lock.json"])
 git(["commit", "-m", `bump to ${newVersion}`])
 git(["tag", `v${newVersion}`])
 
