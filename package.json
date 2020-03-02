@@ -62,7 +62,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.16.4",
-    "flatten-svg": "^0.2.0",
+    "flatten-svg": "^0.2.1",
     "serialport": "^8.0.7",
     "wake-lock": "^0.2.0",
     "ws": "^6.1.3",
