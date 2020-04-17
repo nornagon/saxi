@@ -13,12 +13,20 @@ self.addEventListener("message", (m) => {
   (self as any).postMessage(serialized);
 });
 
+// CSS, and thus SVG, defines 1px = 1/96th of 1in
+// https://www.w3.org/TR/css-values-4/#absolute-lengths
+const svgUnitsPerInch = 96
+const mmPerInch = 25.4
+const mmPerSvgUnit = mmPerInch / svgUnitsPerInch
+
 function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   let paths = inPaths;
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
   if (planOptions.fitPage) {
     paths = scaleToPaper(paths, planOptions.paperSize, planOptions.marginMm);
+  } else {
+    paths = paths.map(ps => ps.map(p => vmul(p, mmPerSvgUnit)))
   }
 
   // Rescaling loses the stroke info, so refer back to the original paths to
