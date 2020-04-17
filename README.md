@@ -29,7 +29,6 @@ To install saxi on a Raspberry Pi, first install node.js if you haven't already:
 ```
 $ curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
 $ sudo apt-get install -y nodejs
-$ sudo chmod a+rwx /usr/lib/node_modules
 ```
 
 and then proceed as above :) If you connect to the raspberry pi over ssh, you might want to run the `saxi` server inside a tmux or screen session to have it stay running even if your ssh session disconnects.
