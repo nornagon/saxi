@@ -37,6 +37,11 @@ describe("EBB.list", () => {
     MockBinding.createPort('/dev/ebb', { manufacturer: "SchmalzHaus LLC" });
     expect(await EBB.list()).toEqual(["/dev/ebb"])
   })
+
+  it("handles no manufacturer but vendor id / product id", async () => {
+    MockBinding.createPort('/dev/ebb', { vendorId: "04D8", productId: "FD92" });
+    expect(await EBB.list()).toEqual(["/dev/ebb"])
+  })
 })
 
 describe("EBB", () => {

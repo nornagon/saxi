@@ -11,7 +11,7 @@ function modf(d: number): [number, number] {
 }
 
 function isEBB(p: SerialPort.PortInfo): boolean {
-  return p.manufacturer === "SchmalzHaus" || p.manufacturer === "SchmalzHaus LLC";
+  return p.manufacturer === "SchmalzHaus" || p.manufacturer === "SchmalzHaus LLC" || (p.vendorId == "04D8" && p.productId == "FD92");
 }
 
 export class EBB {
