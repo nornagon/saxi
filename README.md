@@ -100,5 +100,15 @@ These images were plotted by folks using saxi. If you'd like to add something yo
         <p>by <strong>Lionel Radisson (<a href="https://twitter.com/MAKIO135">@MAKIO135</a>)</strong></p>
       </td>
     </tr>
+    <tr>
+      <td width=300>
+        <a href="https://www.instagram.com/p/B4iixy7gDB9/"><img width="272" src="https://user-images.githubusercontent.com/172800/80815693-faebfb00-8b82-11ea-81a3-24f825b405ce.jpg" alt="Plotted image by @daniel_feles" /></a>
+        <p>by <strong>Daniel Feles (<a href="https://www.instagram.com/daniel_feles/">@daniel_feles</a>)</strong></p>
+      </td>
+      <td width=300>
+      </td>
+      <td width=300>
+      </td>
+    </tr>
   </tbody>
 </table>
