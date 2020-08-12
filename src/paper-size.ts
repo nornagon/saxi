@@ -34,6 +34,7 @@ export class PaperSize {
     "A6": new PaperSize({x: 105, y: 148}),
     "6x8": new PaperSize(vround(vmul({x: 6, y: 8}, 25.4))),
     "5x7": new PaperSize(vround(vmul({x: 5, y: 7}, 25.4))),
+    "11x14": new PaperSize(vround(vmul({x: 11, y: 14}, 25.4))),
   };
   public size: Vec2;
   public constructor(size: Vec2) {
