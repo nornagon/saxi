@@ -28,6 +28,7 @@ export function startServer(port: number, device: string | null = null, enableCo
   let signalUnpause: () => void | null = null;
   let motionIdx: number | null = null;
   let currentPlan: Plan | null = null;
+  let plotting = false
 
   wss.on("connection", (ws) => {
     clients.push(ws);
@@ -63,28 +64,37 @@ export function startServer(port: number, device: string | null = null, enableCo
   });
 
   app.post("/plot", async (req, res) => {
-    const plan = Plan.deserialize(req.body);
-    currentPlan = req.body;
-    console.log(`Received plan of estimated duration ${formatDuration(plan.duration())}`);
-    console.log(ebb != null ? "Beginning plot..." : "Simulating plot...");
-    res.status(200).end();
-
-    const begin = Date.now();
-    let wakeLock: any;
-    try {
-      wakeLock = new WakeLock("saxi plotting");
-    } catch (e) {
-      console.warn("Couldn't acquire wake lock. Ensure your machine does not sleep during plotting");
+    if (plotting) {
+      console.log("Received plot request, but a plot is already in progress!")
+      return res.status(400).end('Plot in progress')
     }
-
+    plotting = true
     try {
-      await doPlot(ebb != null ? realPlotter : simPlotter, plan);
-      const end = Date.now();
-      console.log(`Plot took ${formatDuration((end - begin) / 1000)}`);
-    } finally {
-      if (wakeLock) {
-        wakeLock.release();
+      const plan = Plan.deserialize(req.body);
+      currentPlan = req.body;
+      console.log(`Received plan of estimated duration ${formatDuration(plan.duration())}`);
+      console.log(ebb != null ? "Beginning plot..." : "Simulating plot...");
+      res.status(200).end();
+
+      const begin = Date.now();
+      let wakeLock: any;
+      try {
+        wakeLock = new WakeLock("saxi plotting");
+      } catch (e) {
+        console.warn("Couldn't acquire wake lock. Ensure your machine does not sleep during plotting");
       }
+
+      try {
+        await doPlot(ebb != null ? realPlotter : simPlotter, plan);
+        const end = Date.now();
+        console.log(`Plot took ${formatDuration((end - begin) / 1000)}`);
+      } finally {
+        if (wakeLock) {
+          wakeLock.release();
+        }
+      }
+    } finally {
+      plotting = false
     }
   });
 
