@@ -1,7 +1,7 @@
 import * as Optimization from "./optimization";
 import * as Planning from "./planning";
 import {Device, Plan, PlanOptions} from "./planning";
-import {dedupPoints, scaleToPaper} from "./util";
+import {dedupPoints, scaleToPaper, cropToMargins} from "./util";
 import {Vec2, vmul} from "./vec";
 
 self.addEventListener("message", (m) => {
@@ -27,6 +27,9 @@ function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
     paths = scaleToPaper(paths, planOptions.paperSize, planOptions.marginMm);
   } else {
     paths = paths.map(ps => ps.map(p => vmul(p, mmPerSvgUnit)))
+    if (planOptions.cropToMargins) {
+      paths = cropToMargins(paths, planOptions.paperSize, planOptions.marginMm)
+    }
   }
 
   // Rescaling loses the stroke info, so refer back to the original paths to
