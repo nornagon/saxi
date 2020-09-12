@@ -29,6 +29,7 @@ export interface PlanOptions {
 
   sortPaths: boolean;
   fitPage: boolean;
+  cropToMargins: boolean;
 
   minimumPathLength: number;
 }

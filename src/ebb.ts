@@ -23,7 +23,7 @@ export class EBB {
 
   public port: SerialPort;
   public parser: SerialPort.parsers.Delimiter;
-  private commandQueue: IterableIterator<any>[];
+  private commandQueue: Iterator<any, any, Buffer>[];
 
   private microsteppingMode: number = 0;
 
@@ -77,7 +77,7 @@ export class EBB {
 
   /** Send a raw command to the EBB and expect a single line in return, without an "OK" line to terminate. */
   public query(cmd: string): Promise<string> {
-    return this.run(function*() {
+    return this.run(function*(): Iterator<string, string, Buffer> {
       this.port.write(`${cmd}\r`);
       const result = (yield).toString("ascii");
       return result;
@@ -86,7 +86,7 @@ export class EBB {
 
   /** Send a raw command to the EBB and expect multiple lines in return, with an "OK" line to terminate. */
   public queryM(cmd: string): Promise<string[]> {
-    return this.run(function*() {
+    return this.run(function*(): Iterator<string[], string[], Buffer> {
       this.port.write(`${cmd}\r`);
       const result: string[] = [];
       while (true) {
@@ -100,7 +100,7 @@ export class EBB {
 
   /** Send a raw command to the EBB and expect a single "OK" line in return. */
   public command(cmd: string): Promise<void> {
-    return this.run(function*() {
+    return this.run(function*(): Iterator<void, void, Buffer> {
       this.port.write(`${cmd}\r`);
       const ok = (yield).toString("ascii");
       if (ok !== "OK") {
@@ -347,7 +347,7 @@ export class EBB {
     return [initialRate, deltaR];
   }
 
-  private run<T>(g: () => IterableIterator<T>): Promise<T> {
+  private run<T>(g: () => Iterator<T>): Promise<T> {
     const cmd = g.call(this);
     const d = cmd.next();
     if (d.done) { return Promise.resolve(d.value); }

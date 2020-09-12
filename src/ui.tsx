@@ -38,6 +38,7 @@ const defaultPlanOptions: PlanOptions = {
 
   sortPaths: true,
   fitPage: true,
+  cropToMargins: true,
 
   minimumPathLength: 0,
 };
@@ -656,6 +657,16 @@ function PlanOptions({state}: {state: State}) {
       />
       fit page
     </label>
+    {!state.planOptions.fitPage ?
+      <label className="flex-checkbox" title="Remove lines that fall outside the margins.">
+        <input
+          type="checkbox"
+          checked={state.planOptions.cropToMargins}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {cropToMargins: !!e.target.checked}})}
+        />
+        crop to margins
+      </label>
+      : null}
     <label className="flex-checkbox" title="Split into layers according to group ID, instead of stroke">
       <input
         type="checkbox"
