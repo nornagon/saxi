@@ -18,6 +18,11 @@ export function cli(argv: string[]): void {
       describe: "enable cross-origin resource sharing (CORS)",
       type: "boolean"
     })
+    .option("max-payload-size", {
+      describe: "maximum payload size to accept",
+      default: "200 mb",
+      type: "string"
+    })
     .option("firmware-version", {
       describe: "print the device's firmware version and exit",
       type: "boolean"
@@ -35,6 +40,6 @@ export function cli(argv: string[]): void {
       await ebb.close();
     });
   } else {
-    startServer(args.port, args.device, args["enable-cors"]);
+    startServer(args.port, args.device, args["enable-cors"], args["max-payload-size"]);
   }
 }
