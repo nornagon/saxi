@@ -9,11 +9,11 @@ import { EBB } from "./ebb";
 import { Device, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 
-export function startServer(port: number, device: string | null = null, enableCors: boolean = false) {
+export function startServer(port: number, device: string | null = null, enableCors: boolean = false, maxPayloadSize: string = "200mb") {
   const app = express();
 
   app.use("/", express.static(path.join(__dirname, "..", "ui")));
-  app.use(express.json({limit: "100mb"}));
+  app.use(express.json({limit: maxPayloadSize}));
   if (enableCors) {
     app.use(cors());
   }

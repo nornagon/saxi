@@ -189,7 +189,7 @@ class Driver {
     fetch("/plot", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(plan.serialize()),
+      body: new Blob([ JSON.stringify(plan.serialize()) ], { type: 'application/json' })
     });
   }
 
