@@ -658,7 +658,7 @@ function PlanOptions({state}: {state: State}) {
       fit page
     </label>
     {!state.planOptions.fitPage ?
-      <label className="flex-checkbox" title="Remove lines that fall outside the margins.">
+      <label className="flex-checkbox" title="Remove lines that fall outside the margins">
         <input
           type="checkbox"
           checked={state.planOptions.cropToMargins}
@@ -763,7 +763,7 @@ function PlanOptions({state}: {state: State}) {
         </label>
       </div>
       <div className="flex">
-        <label title="How long the pen takes to lift, in seconds">
+        <label title="How long the pen takes to lift (in seconds)">
           pen lift duration (s)
           <input
             type="number"
@@ -773,7 +773,7 @@ function PlanOptions({state}: {state: State}) {
             onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penLiftDuration: Number(e.target.value)}})}
           />
         </label>
-        <label title="How long the pen takes to drop, in seconds">
+        <label title="How long the pen takes to drop (in seconds)">
           pen drop duration (s)
           <input
             type="number"

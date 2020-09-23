@@ -10,7 +10,7 @@ export interface PlanOptions {
   marginMm: number;
   selectedStrokeLayers: Set<string>;
   selectedGroupLayers: Set<string>;
-  layerMode: 'group' | 'stroke';
+  layerMode: 'group' | 'stroke' | 'all';
 
   penUpHeight: number;
   penDownHeight: number;
