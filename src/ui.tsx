@@ -4,7 +4,7 @@ import ReactDOM from "react-dom";
 
 import {flattenSVG} from "flatten-svg";
 import {PaperSize} from "./paper-size";
-import {Device, Plan, PlanOptions, XYMotion} from "./planning";
+import {Device, Plan, PlanOptions, defaultPlanOptions, XYMotion} from "./planning";
 import {formatDuration} from "./util";
 import {Vec2} from "./vec";
 
@@ -14,34 +14,6 @@ import "./style.css";
 
 import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
-
-const defaultPlanOptions: PlanOptions = {
-  penUpHeight: 50,
-  penDownHeight: 60,
-  pointJoinRadius: 0,
-  pathJoinRadius: 0.5,
-  paperSize: PaperSize.standard.ArchA.landscape,
-  marginMm: 20,
-  selectedGroupLayers: new Set(),
-  selectedStrokeLayers: new Set(),
-  layerMode: 'stroke',
-
-  penDownAcceleration: 200,
-  penDownMaxVelocity: 50,
-  penDownCorneringFactor: 0.127,
-
-  penUpAcceleration: 400,
-  penUpMaxVelocity: 200,
-
-  penDropDuration: 0.12,
-  penLiftDuration: 0.12,
-
-  sortPaths: true,
-  fitPage: true,
-  cropToMargins: true,
-
-  minimumPathLength: 0,
-};
 
 const initialState = {
   connected: true,
@@ -658,7 +630,7 @@ function PlanOptions({state}: {state: State}) {
       fit page
     </label>
     {!state.planOptions.fitPage ?
-      <label className="flex-checkbox" title="Remove lines that fall outside the margins.">
+      <label className="flex-checkbox" title="Remove lines that fall outside the margins">
         <input
           type="checkbox"
           checked={state.planOptions.cropToMargins}
@@ -763,7 +735,7 @@ function PlanOptions({state}: {state: State}) {
         </label>
       </div>
       <div className="flex">
-        <label title="How long the pen takes to lift, in seconds">
+        <label title="How long the pen takes to lift (in seconds)">
           pen lift duration (s)
           <input
             type="number"
@@ -773,7 +745,7 @@ function PlanOptions({state}: {state: State}) {
             onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penLiftDuration: Number(e.target.value)}})}
           />
         </label>
-        <label title="How long the pen takes to drop, in seconds">
+        <label title="How long the pen takes to drop (in seconds)">
           pen drop duration (s)
           <input
             type="number"

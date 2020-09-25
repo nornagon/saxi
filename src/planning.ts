@@ -10,7 +10,7 @@ export interface PlanOptions {
   marginMm: number;
   selectedStrokeLayers: Set<string>;
   selectedGroupLayers: Set<string>;
-  layerMode: 'group' | 'stroke';
+  layerMode: 'group' | 'stroke' | 'all';
 
   penUpHeight: number;
   penDownHeight: number;
@@ -33,6 +33,34 @@ export interface PlanOptions {
 
   minimumPathLength: number;
 }
+
+export const defaultPlanOptions: PlanOptions = {
+  penUpHeight: 50,
+  penDownHeight: 60,
+  pointJoinRadius: 0,
+  pathJoinRadius: 0.5,
+  paperSize: PaperSize.standard.ArchA.landscape,
+  marginMm: 20,
+  selectedGroupLayers: new Set(),
+  selectedStrokeLayers: new Set(),
+  layerMode: 'stroke',
+
+  penDownAcceleration: 200,
+  penDownMaxVelocity: 50,
+  penDownCorneringFactor: 0.127,
+
+  penUpAcceleration: 400,
+  penUpMaxVelocity: 200,
+
+  penDropDuration: 0.12,
+  penLiftDuration: 0.12,
+
+  sortPaths: true,
+  fitPage: true,
+  cropToMargins: true,
+
+  minimumPathLength: 0,
+};
 
 interface Instant {
   t: number;
