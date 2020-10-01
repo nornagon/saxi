@@ -22,6 +22,7 @@ $ saxi
 Server listening on http://0.0.0.0:9080
 Connecting to EBB on /dev/tty.usbmodem1461
 ```
+If you encounter an `EACCES` error when installing the package globally, see [Resolving EACCES permissions errors when installing packages globally](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
 
 #### Raspberry Pi
 To install saxi on a Raspberry Pi, first install node.js if you haven't already:
