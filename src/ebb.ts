@@ -30,6 +30,7 @@ export class EBB {
   /** Accumulated XY error, used to correct for movements with sub-step resolution */
   private error: Vec2 = {x: 0, y: 0};
 
+  private cachedFirmwareVersion: [number, number, number] | undefined = undefined;
   private cachedSupportsLM: boolean | undefined = undefined;
 
   public constructor(port: SerialPort) {
@@ -109,15 +110,37 @@ export class EBB {
     });
   }
 
-  public enableMotors(microsteppingMode: number): Promise<void> {
+  public async enableMotors(microsteppingMode: number): Promise<void> {
     if (!(1 <= microsteppingMode && microsteppingMode <= 5)) {
       throw new Error(`Microstepping mode must be between 1 and 5, but was ${microsteppingMode}`);
     }
     this.microsteppingMode = microsteppingMode;
-    return this.command(`EM,${microsteppingMode},${microsteppingMode}`);
+    await this.command(`EM,${microsteppingMode},${microsteppingMode}`);
+    // if the board supports SR, we should also enable the servo motors.
+    if (await this.supportsSR())
+      await this.setServoPowerTimeout(0, true);
   }
 
-  public disableMotors(): Promise<void> { return this.command("EM,0,0"); }
+  public async disableMotors(): Promise<void> {
+    await this.command("EM,0,0");
+    // if the board supports SR, we should also disable the servo motors.
+    if (await this.supportsSR())
+      // 60 seconds is the default boot-time servo power timeout.
+      await this.setServoPowerTimeout(60000, false);
+  }
+
+  /**
+   * Set the servo power timeout, in seconds. If a second parameter is
+   * supplied, the servo will be immediately commanded into the given state (on
+   * or off) depending on its value, in addition to setting the power-off
+   * timeout duration.
+   *
+   * NB. this command is only avaliable on firmware v2.6.0 and hardware of at
+   * least version 2.5.0.
+   */
+  public async setServoPowerTimeout(timeout: number, power?: boolean) {
+    await this.command(`SR,${(timeout * 1000) | 0}${power != null ? `,${power ? 1 : 0}` : ''}`)
+  }
 
   public setPenHeight(height: number, rate: number, delay: number = 0): Promise<void> {
     return this.command(`S2,${height},4,${rate},${delay}`);
@@ -280,6 +303,8 @@ export class EBB {
     for (const m of plan.motions) {
       await this.executeMotion(m);
     }
+
+    await this.disableMotors();
   }
 
   /**
@@ -302,7 +327,30 @@ export class EBB {
    * @return The version string, e.g. "Version: EBBv13_and_above EB Firmware Version 2.5.3"
    */
   public async firmwareVersion(): Promise<string> {
-    return this.query("V");
+    if (this.cachedFirmwareVersion === undefined) {
+      const versionString = await this.query("V");
+      const versionWords = (await this.firmwareVersion()).split(" ");
+      const [major, minor, patch] = fwvWords[fwvWords.length - 1].split("\\.").map(Number);
+      this.cachedFirmwareVersion = [major, minor, patch];
+    }
+    return this.cachedFirmwareVersion;
+  }
+
+  /**
+   * Compare the firmware version of the EBB with the given version.
+   *
+   * @return -1 if the firmware is older than the given version, 0 if it's
+   * identical, and 1 if it's newer.
+   */
+  public async firmwareVersionCompare(major: number, minor: number, patch: number): number {
+    const [fwMajor, fwMinor, fwPatch] = await this.firmwareVersion();
+    if (fwMajor < major) return -1;
+    if (fwMajor > major) return 1;
+    if (fwMinor < minor) return -1;
+    if (fwMinor > minor) return 1;
+    if (fwPatch < patch) return -1;
+    if (fwPatch > patch) return 1;
+    return 0;
   }
 
   public async areSteppersPowered(): Promise<boolean> {
@@ -313,20 +361,19 @@ export class EBB {
   public async queryButton(): Promise<boolean> {
     return (await this.queryM("QB"))[0] === "1";
   }
+
   /**
    * @return true iff the EBB firmware supports the LM command.
    */
   public async supportsLM(): Promise<boolean> {
-    if (typeof this.cachedSupportsLM === "undefined") {
-      const fwvWords = (await this.firmwareVersion()).split(" ");
-      const [major, minor, patch] = fwvWords[fwvWords.length - 1].split("\\.").map(Number);
-      this.cachedSupportsLM = (
-        major > 2 ||
-        (major === 2 && minor > 5) ||
-        (major === 2 && minor === 5 && patch >= 3)
-      );
-    }
-    return this.cachedSupportsLM;
+    return this.firmwareVersionCompare(2, 5, 3) >= 0;
+  }
+
+  /**
+   * @return true iff the EBB firmware supports the SR command.
+   */
+  public async supportsSR(): Promise<boolean> {
+    return this.firmwareVersionCompare(2, 6, 0) >= 0;
   }
 
   /**
