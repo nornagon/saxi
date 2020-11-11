@@ -324,13 +324,20 @@ export class EBB {
   /**
    * Query the firmware version running on the EBB.
    *
-   * @return The version string, e.g. "Version: EBBv13_and_above EB Firmware Version 2.5.3"
+   * @return The version string, e.g. "EBBv13_and_above EB Firmware Version 2.5.3"
    */
   public async firmwareVersion(): Promise<string> {
+    return await this.query("V");
+  }
+
+  /**
+   * @return The firmware version as a parsed version triple, e.g. [2, 5, 3]
+   */
+  public async firmwareVersionNumber(): Promise<[number, number, number]> {
     if (this.cachedFirmwareVersion === undefined) {
-      const versionString = await this.query("V");
-      const versionWords = (await this.firmwareVersion()).split(" ");
-      const [major, minor, patch] = fwvWords[fwvWords.length - 1].split("\\.").map(Number);
+      const versionString = await this.firmwareVersion();
+      const versionWords = versionString.split(" ");
+      const [major, minor, patch] = versionWords[versionWords.length - 1].split(".").map(Number);
       this.cachedFirmwareVersion = [major, minor, patch];
     }
     return this.cachedFirmwareVersion;
@@ -342,8 +349,8 @@ export class EBB {
    * @return -1 if the firmware is older than the given version, 0 if it's
    * identical, and 1 if it's newer.
    */
-  public async firmwareVersionCompare(major: number, minor: number, patch: number): number {
-    const [fwMajor, fwMinor, fwPatch] = await this.firmwareVersion();
+  public async firmwareVersionCompare(major: number, minor: number, patch: number): Promise<number> {
+    const [fwMajor, fwMinor, fwPatch] = await this.firmwareVersionNumber();
     if (fwMajor < major) return -1;
     if (fwMajor > major) return 1;
     if (fwMinor < minor) return -1;
@@ -366,14 +373,14 @@ export class EBB {
    * @return true iff the EBB firmware supports the LM command.
    */
   public async supportsLM(): Promise<boolean> {
-    return this.firmwareVersionCompare(2, 5, 3) >= 0;
+    return (await this.firmwareVersionCompare(2, 5, 3)) >= 0;
   }
 
   /**
    * @return true iff the EBB firmware supports the SR command.
    */
   public async supportsSR(): Promise<boolean> {
-    return this.firmwareVersionCompare(2, 6, 0) >= 0;
+    return (await this.firmwareVersionCompare(2, 6, 0)) >= 0;
   }
 
   /**
