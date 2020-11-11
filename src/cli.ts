@@ -234,8 +234,10 @@ export function cli(argv: string[]): void {
           process.exit(1)
         }
         console.log("plotting...")
-        ebb.executePlan(p)
-        console.log("done!")
+        const startTime = +new Date
+        await ebb.executePlan(p)
+        console.log(`done! took ${formatDuration((+new Date - startTime) / 1000)}`)
+        await ebb.close()
       }
     )
     .parse(argv);

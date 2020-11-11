@@ -304,6 +304,7 @@ export class EBB {
       await this.executeMotion(m);
     }
 
+    await this.waitUntilMotorsIdle();
     await this.disableMotors();
   }
 
