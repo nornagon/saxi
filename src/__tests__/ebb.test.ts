@@ -74,8 +74,14 @@ describe("EBB", () => {
   it("enable motors", async () => {
     const port = await openTestPort();
     const ebb = new EBB(port);
+    const oldWrite = port.write
+    port.write = (data: string | Buffer | number[], ...args: any[]) => {
+      if (data === 'V\r')
+        port.binding.emitData(Buffer.from('test 2.5.3\r\n'))
+      return oldWrite.apply(port, [data, ...args])
+    }
     port.binding.emitData(Buffer.from('OK\r\n'));
     await ebb.enableMotors(2);
-    expect(port.binding.recording).toEqual(Buffer.from("EM,2,2\r"));
+    expect(port.binding.recording).toEqual(Buffer.from("EM,2,2\rV\r"));
   })
 })
