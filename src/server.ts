@@ -43,7 +43,14 @@ export function startServer(port: number, device: string | null = null, enableCo
             if (ebb) { ebb.disableMotors(); }
             break;
           case "setPenHeight":
-            if (ebb) { ebb.setPenHeight(msg.p.height, msg.p.rate); }
+            if (ebb) {
+              (async () => {
+                if (await ebb.supportsSR()) {
+                  await ebb.setServoPowerTimeout(10000, true)
+                }
+                await ebb.setPenHeight(msg.p.height, msg.p.rate);
+              })();
+            }
             break;
         }
       }
