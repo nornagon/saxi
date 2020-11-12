@@ -395,6 +395,7 @@ export class EBB {
    * @return A tuple of (initialAxisRate, deltaR) that can be passed to the LM command
    */
   private axisRate(steps: number, initialStepsPerSec: number, finalStepsPerSec: number): [number, number] {
+    if (steps === 0) return [0, 0]
     const initialRate = Math.round(initialStepsPerSec * (0x80000000 / 25000));
     const finalRate = Math.round(finalStepsPerSec * (0x80000000 / 25000));
     const moveTime = 2 * Math.abs(steps) / (initialStepsPerSec + finalStepsPerSec);
