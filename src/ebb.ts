@@ -76,38 +76,57 @@ export class EBB {
     });
   }
 
+  private write(str: string): boolean {
+    if (process.env.DEBUG_SAXI_COMMANDS) {
+      console.log(`writing: ${str}`)
+    }
+    return this.port.write(str);
+  }
+
   /** Send a raw command to the EBB and expect a single line in return, without an "OK" line to terminate. */
-  public query(cmd: string): Promise<string> {
-    return this.run(function*(): Iterator<string, string, Buffer> {
-      this.port.write(`${cmd}\r`);
-      const result = (yield).toString("ascii");
-      return result;
-    });
+  public async query(cmd: string): Promise<string> {
+    try {
+      return await this.run(function* (): Iterator<string, string, Buffer> {
+        this.write(`${cmd}\r`);
+        const result = (yield).toString("ascii");
+        return result;
+      });
+    } catch (err) {
+      throw new Error(`Error in response to query '${cmd}': ${err.message}`);
+    }
   }
 
   /** Send a raw command to the EBB and expect multiple lines in return, with an "OK" line to terminate. */
-  public queryM(cmd: string): Promise<string[]> {
-    return this.run(function*(): Iterator<string[], string[], Buffer> {
-      this.port.write(`${cmd}\r`);
-      const result: string[] = [];
-      while (true) {
-        const line = (yield).toString("ascii");
-        if (line === "OK") { break; }
-        result.push(line);
-      }
-      return result;
-    });
+  public async queryM(cmd: string): Promise<string[]> {
+    try {
+      return await this.run(function*(): Iterator<string[], string[], Buffer> {
+        this.write(`${cmd}\r`);
+        const result: string[] = [];
+        while (true) {
+          const line = (yield).toString("ascii");
+          if (line === "OK") { break; }
+          result.push(line);
+        }
+        return result;
+      });
+    } catch (err) {
+      throw new Error(`Error in response to queryM '${cmd}': ${err.message}`);
+    }
   }
 
   /** Send a raw command to the EBB and expect a single "OK" line in return. */
-  public command(cmd: string): Promise<void> {
-    return this.run(function*(): Iterator<void, void, Buffer> {
-      this.port.write(`${cmd}\r`);
-      const ok = (yield).toString("ascii");
-      if (ok !== "OK") {
-        throw new Error(`Expected OK, got ${ok}`);
-      }
-    });
+  public async command(cmd: string): Promise<void> {
+    try {
+      return await this.run(function*(): Iterator<void, void, Buffer> {
+        this.write(`${cmd}\r`);
+        const ok = (yield).toString("ascii");
+        if (ok !== "OK") {
+          throw new Error(`Expected OK, got ${ok}`);
+        }
+      });
+    } catch (err) {
+      throw new Error(`Error in response to command '${cmd}': ${err.message}`);
+    }
   }
 
   public async enableMotors(microsteppingMode: number): Promise<void> {
@@ -403,7 +422,7 @@ export class EBB {
     return [initialRate, deltaR];
   }
 
-  private run<T>(g: () => Iterator<T>): Promise<T> {
+  private run<T>(g: (this: EBB) => Iterator<T>): Promise<T> {
     const cmd = g.call(this);
     const d = cmd.next();
     if (d.done) { return Promise.resolve(d.value); }
