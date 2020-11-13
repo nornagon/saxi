@@ -31,7 +31,6 @@ export class EBB {
   private error: Vec2 = {x: 0, y: 0};
 
   private cachedFirmwareVersion: [number, number, number] | undefined = undefined;
-  private cachedSupportsLM: boolean | undefined = undefined;
 
   public constructor(port: SerialPort) {
     this.port = port;

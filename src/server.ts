@@ -261,6 +261,12 @@ async function waitForEbb() {
   }
 }
 
+function drain(port: SerialPort) {
+  while (port.read() != null) {
+    /* do nothing */
+  }
+}
+
 async function* ebbs(path?: string) {
   while (true) {
     try {
@@ -271,6 +277,7 @@ async function* ebbs(path?: string) {
         port.once("close", resolve);
         port.once("error", resolve);
       });
+      drain(port);
       yield new EBB(port);
       await closed;
       yield null;
