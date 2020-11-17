@@ -517,6 +517,21 @@ function PlanPreview(
   </div>;
 }
 
+function PlanLoader(
+  {isLoadingFile, isPlanning}: {
+    isLoadingFile: boolean;
+    isPlanning: boolean;
+  }
+) {
+  if (isLoadingFile || isPlanning) {
+    return <div className="preview-loader">
+      {isLoadingFile ? 'Loading file...' : 'Replanning...'}
+    </div>;
+  }
+  
+  return null;
+}
+
 function LayerSelector({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
   const layers = state.planOptions.layerMode === 'group' ? state.groupLayers : state.strokeLayers
@@ -763,6 +778,8 @@ function PlanOptions({state}: {state: State}) {
 function Root({driver}: {driver: Driver}) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPlanning, plan, setPlan] = usePlan(state.paths, state.planOptions);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
+
   useEffect(() => {
     window.localStorage.setItem("planOptions", JSON.stringify(state.planOptions));
   }, [state.planOptions]);
@@ -790,9 +807,14 @@ function Root({driver}: {driver: Driver}) {
       const item = e.dataTransfer.items[0];
       const file = item.getAsFile();
       const reader = new FileReader();
+      setIsLoadingFile(true);
       reader.onload = () => {
         dispatch(setPaths(readSvg(reader.result as string)));
         document.body.classList.remove("dragover");
+        setIsLoadingFile(false);
+      };
+      reader.onerror = () => {
+        setIsLoadingFile(false);
       };
       reader.readAsText(file);
     };
@@ -862,6 +884,7 @@ function Root({driver}: {driver: Driver}) {
           previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}}
           plan={plan}
         />
+        <PlanLoader isPlanning={isPlanning} isLoadingFile={isLoadingFile} />
         {plan ? null : <DragTarget/>}
       </div>
     </div>
