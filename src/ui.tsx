@@ -808,6 +808,7 @@ function Root({driver}: {driver: Driver}) {
       const file = item.getAsFile();
       const reader = new FileReader();
       setIsLoadingFile(true);
+      setPlan(null);
       reader.onload = () => {
         dispatch(setPaths(readSvg(reader.result as string)));
         document.body.classList.remove("dragover");
@@ -845,6 +846,8 @@ function Root({driver}: {driver: Driver}) {
 
   const previewArea = useRef(null);
   const previewSize = useComponentSize(previewArea);
+  const showDragTarget = !plan && !isLoadingFile && !isPlanning;
+
   return <DispatchContext.Provider value={dispatch}>
     <div className={`root ${state.connected ? "connected" : "disconnected"}`}>
       <div className="control-panel">
@@ -885,7 +888,7 @@ function Root({driver}: {driver: Driver}) {
           plan={plan}
         />
         <PlanLoader isPlanning={isPlanning} isLoadingFile={isLoadingFile} />
-        {plan ? null : <DragTarget/>}
+        {showDragTarget ? <DragTarget/> : null}
       </div>
     </div>
   </DispatchContext.Provider>;
