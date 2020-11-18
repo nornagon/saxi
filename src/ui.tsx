@@ -411,24 +411,64 @@ function PlanPreview(
   }
 ) {
   const ps = state.planOptions.paperSize;
+  const progress = state.progress;
+
   const memoizedPlanPreview = useMemo(() => {
     if (plan) {
-      const lines = plan.motions.map((m) => {
+      const lines = plan.motions.map((m, i) => {
         if (m instanceof XYMotion) {
-          return m.blocks.map((b) => b.p1).concat([m.p2]);
-        } else { return []; }
-      }).filter((m) => m.length);
+          const points = m.blocks.map((b) => b.p1).concat([m.p2]);
+          return {
+            points,
+            // Cache line index, as that index is used to compare against progress index
+            lineIndexInPlan: i,
+          };
+        } else { 
+          return { 
+            points: [],
+            lineIndexInPlan: i, 
+          };
+        };
+      }).filter((m) => m.points.length);
+      
       return <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
-        {lines.map((line, i) =>
-          <path
+        {lines.map((line, i) => {
+          const classNames = ['preview-line'];
+
+          const isPenUp = i % 2 === 0;
+
+          if (isPenUp) {
+            classNames.push('preview-line--pen-up');
+          } else {
+            classNames.push(`preview-line--${line.lineIndexInPlan}`);
+
+            if (progress >= line.lineIndexInPlan) {
+              classNames.push('preview-line--drawn');
+            }
+          }
+
+          return <path
             key={i}
-            d={line.reduce((m, {x, y}, j) => m + `${j === 0 ? "M" : "L"}${x} ${y}`, "")}
-            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : {}}
-          />
-        )}
+            d={line.points.reduce((m, {x, y}, j) => m + `${j === 0 ? "M" : "L"}${x} ${y}`, "")}
+            className={classNames.join(' ')}
+          />;
+        })}
       </g>;
     }
   }, [plan]);
+
+  useEffect(() => {
+    if (progress === null) {
+      // Reset color of the previously drawn lines
+      document.querySelectorAll(".preview-line--drawn")
+        .forEach((path: SVGPathElement) => path.classList.remove("preview-line--drawn"));
+    } else  {
+      const line: SVGPathElement = document.querySelector(`.preview-line--${progress}`);
+      if (line) {
+        line.classList.add("preview-line--drawn");
+      }
+    }
+  }, [progress]);
 
   // w/h of svg.
   // first try scaling so that h = area.h. if w < area.w, then ok.

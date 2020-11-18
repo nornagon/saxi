@@ -6,6 +6,7 @@
   --purple-light: #E3DCED;
   --purple-dark: #604987;
   --red: #DE7272;
+  --red-dark:  #E74C3C;
   --panel-width: 260px;
 }
 
@@ -41,9 +42,19 @@ strong {
   height: 100%;
 }
 
-path {
-  stroke: black;
+.preview-line {
   fill: transparent;
+  transition: stroke 200ms;
+  stroke: black;
+}
+
+.preview-line--pen-up {
+  stroke: rgba(0, 0, 0, 0.3); 
+  stroke-width: 0.5;
+}
+
+.preview-line--drawn {
+  stroke: var(--red-dark);
 }
 
 .preview-area {
