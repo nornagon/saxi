@@ -28,6 +28,7 @@ export interface PlanOptions {
   penLiftDuration: number;
 
   sortPaths: boolean;
+  rotateDrawing: number;
   fitPage: boolean;
   cropToMargins: boolean;
 
@@ -56,6 +57,7 @@ export const defaultPlanOptions: PlanOptions = {
   penLiftDuration: 0.12,
 
   sortPaths: true,
+  rotateDrawing: 0,
   fitPage: true,
   cropToMargins: true,
 

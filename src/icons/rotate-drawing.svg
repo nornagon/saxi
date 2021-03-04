@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <marker id='head' orient='auto' markerWidth='2' markerHeight='4'
+            refX='0.1' refY='2'>
+      <path d='M0,0 V4 L2,2 Z' fill='#8E75B6' />
+    </marker>
+  </defs>    
+  <path
+    marker-end='url(#head)'
+    stroke-width='11' fill='none' stroke='#8E75B6'  
+    d='M 69 73 A 30 30 230 1 1 73 31'
+    />    
+</svg>

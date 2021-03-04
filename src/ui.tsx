@@ -14,6 +14,7 @@ import "./style.css";
 
 import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
+import rotateDrawingIcon from "./icons/rotate-drawing.svg";
 
 const initialState = {
   connected: true,
@@ -663,6 +664,11 @@ function PlanOptions({state}: {state: State}) {
       layer by group
     </label>
     <div className="horizontal-labels">
+      <label title="rotate drawing (degrees)">
+        <img src={rotateDrawingIcon} alt="rotate drawing (degrees)"/>
+        <input type="number" min="0" step="90" max="270" value={state.planOptions.rotateDrawing}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {rotateDrawing: e.target.value}})}/>
+      </label>
       <label title="point-joining radius (mm)" >
         <img src={pointJoinRadiusIcon} alt="point-joining radius (mm)"/>
         <input
