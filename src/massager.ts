@@ -14,7 +14,8 @@ export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   let paths = inPaths;
 
   if (planOptions.rotateDrawing !== 0) {
-    paths = inPaths.map((pl) => pl.map((p) => vrot(p, {x:0, y:0}, planOptions.rotateDrawing)));
+    let center = {x:planOptions.paperSize.size.x/2, y:planOptions.paperSize.size.y/2};
+    paths = inPaths.map((pl) => pl.map((p) => vrot(p, center, planOptions.rotateDrawing)));
   }
 
   // Compute scaling using _all_ the paths, so it's the same no matter what
