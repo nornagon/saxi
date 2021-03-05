@@ -13,11 +13,6 @@ const mmPerSvgUnit = mmPerInch / svgUnitsPerInch
 export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   let paths = inPaths;
 
-  if (planOptions.rotateDrawing !== 0) {
-    let center = {x:planOptions.paperSize.size.x/2, y:planOptions.paperSize.size.y/2};
-    paths = inPaths.map((pl) => pl.map((p) => vrot(p, center, planOptions.rotateDrawing)));
-  }
-
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
   if (planOptions.fitPage) {
@@ -27,6 +22,18 @@ export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
     if (planOptions.cropToMargins) {
       paths = cropToMargins(paths, planOptions.paperSize, planOptions.marginMm)
     }
+  }
+
+  // Rotate drawing around center of paper to handle plotting portrait drawings
+  // along y-axis of plotter
+  // This must be done after scaling
+  if (planOptions.rotateDrawing !== 0) {
+    console.time("rotating paths");
+    paths = paths.map((pl) => pl.map((p) => vrot(p, 
+      {x:planOptions.paperSize.size.x/2, y: planOptions.paperSize.size.y/2}, 
+      planOptions.rotateDrawing)
+    ));
+    console.timeEnd("rotating paths");
   }
 
   // Rescaling loses the stroke info, so refer back to the original paths to
