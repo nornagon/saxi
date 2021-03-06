@@ -308,6 +308,22 @@ function PenHeight({state, driver}: {state: State; driver: Driver}) {
   </Fragment>;
 }
 
+function PenWidth({state}: {state: State}) {
+  const dispatch = useContext(DispatchContext);
+  
+  return <label>
+    stroke width (mm)
+    <input
+      type="number"
+      value={state.planOptions.penStrokeWidth}
+      min="0"
+      max="10"
+      step="0.1"
+      onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penStrokeWidth: Number(e.target.value)}})}
+    />
+  </label>;
+}
+
 function SwapPaperSizesButton({ onClick }: { onClick: () => void }) {
   return <svg
     className="paper-sizes__swap"
@@ -423,7 +439,7 @@ function PlanPreview(
           <path
             key={i}
             d={line.reduce((m, {x, y}, j) => m + `${j === 0 ? "M" : "L"}${x} ${y}`, "")}
-            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : {}}
+            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : { stroke: "rgba(0, 0, 0, 0.8)", strokeWidth: state.planOptions.penStrokeWidth * 10 }}
           />
         )}
       </g>;
@@ -859,6 +875,7 @@ function Root({driver}: {driver: Driver}) {
         <div className="section-body">
           <PenHeight state={state} driver={driver} />
           <MotorControl driver={driver} />
+          <PenWidth state={state} />
           <ResetToDefaultsButton />
         </div>
         <div className="section-header">paper</div>
