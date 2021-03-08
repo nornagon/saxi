@@ -311,7 +311,7 @@ function PenHeight({state, driver}: {state: State; driver: Driver}) {
 function PenWidth({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
   
-  return <label>
+  return <label title="Width of lines in preview. Does not affect plot.">
     stroke width (mm)
     <input
       type="number"
