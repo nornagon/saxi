@@ -439,7 +439,7 @@ function PlanPreview(
           <path
             key={i}
             d={line.reduce((m, {x, y}, j) => m + `${j === 0 ? "M" : "L"}${x} ${y}`, "")}
-            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : { stroke: "rgba(0, 0, 0, 0.8)", strokeWidth: state.planOptions.penStrokeWidth * 10 }}
+            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : { stroke: "rgba(0, 0, 0, 0.8)", strokeWidth: state.planOptions.penStrokeWidth * Device.Axidraw.stepsPerMm }}
           />
         )}
       </g>;
