@@ -179,6 +179,11 @@ export function cli(argv: string[]): void {
           type: "number",
           default: defaultPlanOptions.pathJoinRadius
         })
+        .option("rotate-drawing", {
+          describe: "Rotate drawing (in degrees)",
+          type: "number",
+          default: defaultPlanOptions.rotateDrawing
+        })
         .check((args) => {
           if (args.landscape && args.portrait) {
             throw new Error("Only one of --portrait and --landscape may be specified")
@@ -220,6 +225,7 @@ export function cli(argv: string[]): void {
           sortPaths: args["sort-paths"],
           fitPage: args["fit-page"],
           cropToMargins: args["crop-to-margins"],
+          rotateDrawing: args["rotate-drawing"],
 
           minimumPathLength: args["minimum-path-length"],
           pathJoinRadius: args["path-join-radius"],

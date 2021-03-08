@@ -2,7 +2,7 @@ import * as Optimization from "./optimization";
 import * as Planning from "./planning";
 import {Device, Plan, PlanOptions} from "./planning";
 import {dedupPoints, scaleToPaper, cropToMargins} from "./util";
-import {Vec2, vmul} from "./vec";
+import {Vec2, vmul, vrot} from "./vec";
 
 // CSS, and thus SVG, defines 1px = 1/96th of 1in
 // https://www.w3.org/TR/css-values-4/#absolute-lengths
@@ -12,6 +12,19 @@ const mmPerSvgUnit = mmPerInch / svgUnitsPerInch
 
 export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   let paths = inPaths;
+
+  // Rotate drawing around center of paper to handle plotting portrait drawings
+  // along y-axis of plotter
+  // Rotate around the center of the page, but in SvgUnits (not mm)
+  if (planOptions.rotateDrawing !== 0) {
+    console.time("rotating paths");
+    paths = paths.map((pl) => pl.map((p) => vrot(p, 
+      vmul({x:planOptions.paperSize.size.x/2, y: planOptions.paperSize.size.y/2}, 1/mmPerSvgUnit), 
+      planOptions.rotateDrawing)
+    ));
+    console.timeEnd("rotating paths");
+  }
+
   // Compute scaling using _all_ the paths, so it's the same no matter what
   // layers are selected.
   if (planOptions.fitPage) {

@@ -14,6 +14,7 @@ import "./style.css";
 
 import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
+import rotateDrawingIcon from "./icons/rotate-drawing.svg";
 
 const initialState = {
   connected: true,
@@ -377,6 +378,21 @@ function PaperConfig({state}: {state: State}) {
         />
       </label>
     </div>
+    <div>
+      <label>
+      rotate drawing (degrees)
+        <div className="horizontal-labels">
+          <img src={rotateDrawingIcon} alt="rotate drawing (degrees)"/>
+          <input type="number" min="-90" step="90" max="360" placeholder="0" value={state.planOptions.rotateDrawing}
+            onInput={(e) => {
+              let value = (e.target as HTMLInputElement).value;
+              if (Number(value) < 0) { (e.target as HTMLInputElement).value = "270"; }
+              if (Number(value) > 270) { (e.target as HTMLInputElement).value = "0"; }
+            }}
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {rotateDrawing: e.target.value}})}/>
+        </div>
+      </label>
+    </div>
     <label>
       margin (mm)
       <input
@@ -663,6 +679,7 @@ function PlanOptions({state}: {state: State}) {
       layer by group
     </label>
     <div className="horizontal-labels">
+      
       <label title="point-joining radius (mm)" >
         <img src={pointJoinRadiusIcon} alt="point-joining radius (mm)"/>
         <input
