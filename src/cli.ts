@@ -213,6 +213,8 @@ export function cli(argv: string[]): void {
           penUpHeight: args["pen-up-height"],
           penDownHeight: args["pen-down-height"],
 
+          penStrokeWidth: 0.5, // unused in this case, since this is only used by the preview
+
           penDownAcceleration: args["pen-down-acceleration"],
           penDownMaxVelocity: args["pen-down-max-velocity"],
           penDownCorneringFactor: args["pen-down-cornering-factor"],
