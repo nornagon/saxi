@@ -1,4 +1,4 @@
-import * as Optimization from "./optimization";
+import * as Optimization from "optimize-paths";
 import * as Planning from "./planning";
 import {Device, Plan, PlanOptions} from "./planning";
 import {dedupPoints, scaleToPaper, cropToMargins} from "./util";
@@ -18,8 +18,8 @@ export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   // Rotate around the center of the page, but in SvgUnits (not mm)
   if (planOptions.rotateDrawing !== 0) {
     console.time("rotating paths");
-    paths = paths.map((pl) => pl.map((p) => vrot(p, 
-      vmul({x:planOptions.paperSize.size.x/2, y: planOptions.paperSize.size.y/2}, 1/mmPerSvgUnit), 
+    paths = paths.map((pl) => pl.map((p) => vrot(p,
+      vmul({x:planOptions.paperSize.size.x/2, y: planOptions.paperSize.size.y/2}, 1/mmPerSvgUnit),
       planOptions.rotateDrawing)
     ));
     console.timeEnd("rotating paths");
@@ -51,19 +51,19 @@ export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
 
   if (planOptions.sortPaths) {
     console.time("sorting paths");
-    paths = Optimization.optimize(paths);
+    paths = Optimization.reorder(paths);
     console.timeEnd("sorting paths");
   }
 
   if (planOptions.minimumPathLength > 0) {
     console.time("eliding short paths");
-    paths = Optimization.elideShortPaths(paths, planOptions.minimumPathLength);
+    paths = Optimization.elideShorterThan(paths, planOptions.minimumPathLength);
     console.timeEnd("eliding short paths");
   }
 
   if (planOptions.pathJoinRadius > 0) {
     console.time("joining nearby paths");
-    paths = Optimization.joinNearby(
+    paths = Optimization.merge(
       paths,
       planOptions.pathJoinRadius
     );
