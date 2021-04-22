@@ -214,6 +214,14 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
         Device.Axidraw.penPctToPos(newOptions.penDownHeight)
       );
     }
+    const newOptionsWithOldStrokeWidth = {
+      ...newOptions,
+      penStrokeWidth: previousOptions.penStrokeWidth
+    }
+    if (serialize(previousOptions) === serialize(newOptionsWithOldStrokeWidth)) {
+      // Changing stroke width does not change the plan.
+      return previousPlan;
+    }
   }
 
   const lastPaths = useRef(null);
@@ -311,9 +319,9 @@ function PenHeight({state, driver}: {state: State; driver: Driver}) {
 
 function PenWidth({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
-  
+
   return <label title="Width of lines in preview. Does not affect plot.">
-    stroke width (mm)
+    visualized stroke width (mm)
     <input
       type="number"
       value={state.planOptions.penStrokeWidth}
@@ -443,6 +451,7 @@ function PlanPreview(
   }
 ) {
   const ps = state.planOptions.paperSize;
+  const strokeWidth = state.planOptions.penStrokeWidth * Device.Axidraw.stepsPerMm
   const memoizedPlanPreview = useMemo(() => {
     if (plan) {
       const lines = plan.motions.map((m) => {
@@ -455,12 +464,12 @@ function PlanPreview(
           <path
             key={i}
             d={line.reduce((m, {x, y}, j) => m + `${j === 0 ? "M" : "L"}${x} ${y}`, "")}
-            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : { stroke: "rgba(0, 0, 0, 0.8)", strokeWidth: state.planOptions.penStrokeWidth * Device.Axidraw.stepsPerMm }}
+            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : { stroke: "rgba(0, 0, 0, 0.8)", strokeWidth }}
           />
         )}
       </g>;
     }
-  }, [plan]);
+  }, [plan, strokeWidth]);
 
   // w/h of svg.
   // first try scaling so that h = area.h. if w < area.w, then ok.
@@ -560,7 +569,7 @@ function PlanLoader(
       {isLoadingFile ? 'Loading file...' : 'Replanning...'}
     </div>;
   }
-  
+
   return null;
 }
 
@@ -695,7 +704,7 @@ function PlanOptions({state}: {state: State}) {
       layer by group
     </label>
     <div className="horizontal-labels">
-      
+
       <label title="point-joining radius (mm)" >
         <img src={pointJoinRadiusIcon} alt="point-joining radius (mm)"/>
         <input
@@ -892,7 +901,6 @@ function Root({driver}: {driver: Driver}) {
         <div className="section-body">
           <PenHeight state={state} driver={driver} />
           <MotorControl driver={driver} />
-          <PenWidth state={state} />
           <ResetToDefaultsButton />
         </div>
         <div className="section-header">paper</div>
@@ -904,6 +912,7 @@ function Root({driver}: {driver: Driver}) {
           <summary className="section-header">more</summary>
           <div className="section-body">
             <PlanOptions state={state} />
+            <PenWidth state={state} />
           </div>
         </details>
         <div className="spacer" />
