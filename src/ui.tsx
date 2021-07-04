@@ -16,6 +16,10 @@ import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
 import rotateDrawingIcon from "./icons/rotate-drawing.svg";
 
+const defaultVisualizationOptions = {
+  penStrokeWidth: 0.5
+}
+
 const initialState = {
   connected: true,
 
@@ -25,6 +29,7 @@ const initialState = {
 
   // UI state
   planOptions: defaultPlanOptions,
+  visualizationOptions: defaultVisualizationOptions,
 
   // Options used to produce the current value of |plan|.
   plannedOptions: null as PlanOptions | null,
@@ -51,6 +56,8 @@ function reducer(state: State, action: any): State {
   switch (action.type) {
     case "SET_PLAN_OPTION":
       return {...state, planOptions: {...state.planOptions, ...action.value}};
+    case "SET_VISUALIZATION_OPTION":
+      return {...state, visualizationOptions: {...state.visualizationOptions, ...action.value}};
     case "SET_DEVICE_INFO":
       return {...state, deviceInfo: action.value};
     case "SET_PAUSED":
@@ -214,14 +221,6 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
         Device.Axidraw.penPctToPos(newOptions.penDownHeight)
       );
     }
-    const newOptionsWithOldStrokeWidth = {
-      ...newOptions,
-      penStrokeWidth: previousOptions.penStrokeWidth
-    }
-    if (serialize(previousOptions) === serialize(newOptionsWithOldStrokeWidth)) {
-      // Changing stroke width does not change the plan.
-      return previousPlan;
-    }
   }
 
   const lastPaths = useRef(null);
@@ -317,20 +316,22 @@ function PenHeight({state, driver}: {state: State; driver: Driver}) {
   </Fragment>;
 }
 
-function PenWidth({state}: {state: State}) {
+function VisualizationOptions({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
 
-  return <label title="Width of lines in preview. Does not affect plot.">
-    visualized stroke width (mm)
-    <input
-      type="number"
-      value={state.planOptions.penStrokeWidth}
-      min="0"
-      max="10"
-      step="0.1"
-      onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penStrokeWidth: Number(e.target.value)}})}
-    />
-  </label>;
+  return <>
+    <label title="Width of lines in preview. Does not affect plot.">
+      visualized stroke width (mm)
+      <input
+        type="number"
+        value={state.visualizationOptions.penStrokeWidth}
+        min="0"
+        max="10"
+        step="0.1"
+        onChange={(e) => dispatch({type: "SET_VISUALIZATION_OPTION", value: {penStrokeWidth: Number(e.target.value)}})}
+      />
+    </label>
+  </>;
 }
 
 function SwapPaperSizesButton({ onClick }: { onClick: () => void }) {
@@ -451,7 +452,7 @@ function PlanPreview(
   }
 ) {
   const ps = state.planOptions.paperSize;
-  const strokeWidth = state.planOptions.penStrokeWidth * Device.Axidraw.stepsPerMm
+  const strokeWidth = state.visualizationOptions.penStrokeWidth * Device.Axidraw.stepsPerMm
   const memoizedPlanPreview = useMemo(() => {
     if (plan) {
       const lines = plan.motions.map((m) => {
@@ -912,7 +913,7 @@ function Root({driver}: {driver: Driver}) {
           <summary className="section-header">more</summary>
           <div className="section-body">
             <PlanOptions state={state} />
-            <PenWidth state={state} />
+            <VisualizationOptions state={state} />
           </div>
         </details>
         <div className="spacer" />

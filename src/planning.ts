@@ -14,7 +14,6 @@ export interface PlanOptions {
 
   penUpHeight: number;
   penDownHeight: number;
-  penStrokeWidth: number;
   pointJoinRadius: number;
   pathJoinRadius: number;
 
@@ -39,7 +38,6 @@ export interface PlanOptions {
 export const defaultPlanOptions: PlanOptions = {
   penUpHeight: 50,
   penDownHeight: 60,
-  penStrokeWidth: 0.5,
   pointJoinRadius: 0,
   pathJoinRadius: 0.5,
   paperSize: PaperSize.standard.ArchA.landscape,
