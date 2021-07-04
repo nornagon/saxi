@@ -1,6 +1,8 @@
 import useComponentSize from "@rehooks/component-size";
 import React, { ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useReducer } from "react";
 import ReactDOM from "react-dom";
+import * as interpolator from "color-interpolate"
+import * as colormap from "colormap"
 
 import {flattenSVG} from "flatten-svg";
 import {PaperSize} from "./paper-size";
@@ -17,7 +19,8 @@ import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
 import rotateDrawingIcon from "./icons/rotate-drawing.svg";
 
 const defaultVisualizationOptions = {
-  penStrokeWidth: 0.5
+  penStrokeWidth: 0.5,
+  colorPathsByStrokeOrder: false,
 }
 
 const initialState = {
@@ -331,6 +334,14 @@ function VisualizationOptions({state}: {state: State}) {
         onChange={(e) => dispatch({type: "SET_VISUALIZATION_OPTION", value: {penStrokeWidth: Number(e.target.value)}})}
       />
     </label>
+    <label className="flex-checkbox" title="Color paths in the preview based on the order in which they will be plotted. Yellow is first, pink is last.">
+      <input
+        type="checkbox"
+        checked={state.visualizationOptions.colorPathsByStrokeOrder}
+        onChange={(e) => dispatch({type: "SET_VISUALIZATION_OPTION", value: {colorPathsByStrokeOrder: !!e.target.checked}})}
+      />
+      color based on order
+    </label>
   </>;
 }
 
@@ -453,8 +464,12 @@ function PlanPreview(
 ) {
   const ps = state.planOptions.paperSize;
   const strokeWidth = state.visualizationOptions.penStrokeWidth * Device.Axidraw.stepsPerMm
+  const colorPathsByStrokeOrder = state.visualizationOptions.colorPathsByStrokeOrder
   const memoizedPlanPreview = useMemo(() => {
     if (plan) {
+      const palette = colorPathsByStrokeOrder
+        ? interpolator(colormap({colormap: 'spring'}))
+        : () => 'rgba(0, 0, 0, 0.8)'
       const lines = plan.motions.map((m) => {
         if (m instanceof XYMotion) {
           return m.blocks.map((b) => b.p1).concat([m.p2]);
@@ -465,12 +480,12 @@ function PlanPreview(
           <path
             key={i}
             d={line.reduce((m, {x, y}, j) => m + `${j === 0 ? "M" : "L"}${x} ${y}`, "")}
-            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : { stroke: "rgba(0, 0, 0, 0.8)", strokeWidth }}
+            style={i % 2 === 0 ? {stroke: "rgba(0, 0, 0, 0.3)", strokeWidth: 0.5} : { stroke: palette(1 - i / lines.length), strokeWidth }}
           />
         )}
       </g>;
     }
-  }, [plan, strokeWidth]);
+  }, [plan, strokeWidth, colorPathsByStrokeOrder]);
 
   // w/h of svg.
   // first try scaling so that h = area.h. if w < area.w, then ok.
