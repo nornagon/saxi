@@ -563,11 +563,12 @@ export function plan(
 ): Plan {
   const motions: Motion[] = [];
   let curPos = { x: 0, y: 0 };
+  const penMaxUpPos = profile.penUpPos < profile.penDownPos ? 100 : 0
   // for each path: move to the initial point, put the pen down, draw the path,
   // then pick the pen up.
   paths.forEach((p, i) => {
     const m = constantAccelerationPlan(p, profile.penDownProfile);
-    const penUpPos = i === paths.length - 1 ? Device.Axidraw.penPctToPos(0) : profile.penUpPos;
+    const penUpPos = i === paths.length - 1 ? Device.Axidraw.penPctToPos(penMaxUpPos) : profile.penUpPos;
     motions.push(
       constantAccelerationPlan([curPos, m.p1], profile.penUpProfile),
       new PenMotion(profile.penUpPos, profile.penDownPos, profile.penDropDuration),
@@ -578,6 +579,6 @@ export function plan(
   });
   // finally, move back to (0, 0).
   motions.push(constantAccelerationPlan([curPos, {x: 0, y: 0}], profile.penUpProfile));
-  motions.push(new PenMotion(Device.Axidraw.penPctToPos(0), profile.penUpPos, profile.penDropDuration));
+  motions.push(new PenMotion(Device.Axidraw.penPctToPos(penMaxUpPos), profile.penUpPos, profile.penDropDuration));
   return new Plan(motions);
 }
