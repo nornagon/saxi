@@ -27,3 +27,5 @@ declare module 'flatten-svg' {
   import main = require('flatten-svg/index');
   export = main;
 }
+
+declare const IS_WEB: boolean

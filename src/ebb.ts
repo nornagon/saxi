@@ -1,6 +1,5 @@
-import SerialPort from "serialport";
-
 import {Block, Motion, PenMotion, Plan, XYMotion} from "./planning";
+import { RegexParser } from "./regex-transform-stream";
 import {Vec2, vsub} from "./vec";
 
 /** Split d into its fractional and integral parts */
@@ -10,20 +9,11 @@ function modf(d: number): [number, number] {
   return [fracPart, intPart];
 }
 
-function isEBB(p: SerialPort.PortInfo): boolean {
-  return p.manufacturer === "SchmalzHaus" || p.manufacturer === "SchmalzHaus LLC" || (p.vendorId == "04D8" && p.productId == "FD92");
-}
-
 export class EBB {
-  /** List connected EBBs */
-  public static async list(): Promise<string[]> {
-    const ports = await SerialPort.list();
-    return ports.filter(isEBB).map((p) => p.path);
-  }
-
   public port: SerialPort;
-  public parser: SerialPort.parsers.Delimiter;
   private commandQueue: Iterator<any, any, Buffer>[];
+  private writer: WritableStreamDefaultWriter<Uint8Array>;
+  private readableClosed: Promise<void>
 
   private microsteppingMode: number = 0;
 
@@ -34,25 +24,33 @@ export class EBB {
 
   public constructor(port: SerialPort) {
     this.port = port;
-    this.parser = this.port.pipe(new SerialPort.parsers.Regex({ regex: /[\r\n]+/ }));
+    this.writer = this.port.writable.getWriter()
     this.commandQueue = [];
-    this.parser.on("data", (chunk: Buffer) => {
-      if (this.commandQueue.length) {
-        if (chunk[0] === "!".charCodeAt(0)) {
-          return (this.commandQueue.shift() as any).reject(new Error(chunk.toString("ascii")));
-        }
-        try {
-          const d = this.commandQueue[0].next(chunk);
-          if (d.done) {
-            return (this.commandQueue.shift() as any).resolve(d.value);
+    this.readableClosed = port.readable
+      .pipeThrough(new RegexParser({ regex: /[\r\n]+/ }))
+      .pipeTo(new WritableStream({
+        write: (chunk) => {
+          if (/^[\r\n]*$/.test(chunk)) return
+          if (this.commandQueue.length) {
+            if (chunk[0] === "!".charCodeAt(0)) {
+              (this.commandQueue.shift() as any).reject(new Error(chunk.toString("ascii")));
+              return;
+            }
+            try {
+              const d = this.commandQueue[0].next(chunk);
+              if (d.done) {
+                (this.commandQueue.shift() as any).resolve(d.value);
+                return;
+              }
+            } catch (e) {
+              (this.commandQueue.shift() as any).reject(e);
+              return;
+            }
+          } else {
+            console.log(`unexpected data: ${chunk}`);
           }
-        } catch (e) {
-          return (this.commandQueue.shift() as any).reject(e);
         }
-      } else {
-        console.log(`unexpected data: ${chunk}`);
-      }
-    });
+      }))
   }
 
   private get stepMultiplier() {
@@ -67,19 +65,16 @@ export class EBB {
     }
   }
 
-  public close(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      this.port.close((err) => {
-        if (err) { reject(err); } else { resolve(); }
-      });
-    });
+  public async close(): Promise<void> {
+    throw new Error("TODO")
   }
 
-  private write(str: string): boolean {
+  private write(str: string): Promise<void> {
     if (process.env.DEBUG_SAXI_COMMANDS) {
       console.log(`writing: ${str}`)
     }
-    return this.port.write(str);
+    const encoder = new TextEncoder()
+    return this.writer.write(encoder.encode(str))
   }
 
   /** Send a raw command to the EBB and expect a single line in return, without an "OK" line to terminate. */

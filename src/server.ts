@@ -1,10 +1,12 @@
 import cors from "cors";
+import "web-streams-polyfill/es2018"
 import express from "express";
 import http from "http";
 import path from "path";
-import SerialPort from "serialport";
+import { default as NodeSerialPort } from "serialport";
 import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
+import { SerialPortSerialPort } from "./serialport-serialport";
 import { EBB } from "./ebb";
 import { Device, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
@@ -56,7 +58,7 @@ export function startServer(port: number, device: string | null = null, enableCo
       }
     });
 
-    ws.send(JSON.stringify({c: "dev", p: {path: ebb ? ebb.port.path : null}}));
+    ws.send(JSON.stringify({c: "dev", p: {path: ebb ? /*ebb.port.path*/"/dev/XXX" : null}}));
     ws.send(JSON.stringify({c: "pause", p: {paused: !!unpaused}}));
     if (motionIdx != null) {
       ws.send(JSON.stringify({c: "progress", p: {motionIdx}}));
@@ -221,7 +223,7 @@ export function startServer(port: number, device: string | null = null, enableCo
       async function connect() {
         for await (const d of ebbs(device)) {
           ebb = d;
-          broadcast({c: "dev", p: {path: ebb ? ebb.port.path : null}});
+          broadcast({c: "dev", p: {path: ebb ? /*ebb.port.path*/"/dev/XXX" : null}});
         }
       }
       connect();
@@ -233,37 +235,32 @@ export function startServer(port: number, device: string | null = null, enableCo
   });
 }
 
-function tryOpen(path: string): Promise<SerialPort> {
-  return new Promise((resolve, reject) => {
-    const port = new SerialPort(path);
-    port.on("open", () => {
-      port.removeAllListeners();
-      resolve(port);
-    });
-    port.on("error", (e) => {
-      port.removeAllListeners();
-      reject(e);
-    });
-  });
+async function tryOpen(path: string): Promise<SerialPort> {
+  const port = new SerialPortSerialPort(path);
+  await port.open({baudRate: 9600})
+  return port
 }
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function isEBB(p: NodeSerialPort.PortInfo): boolean {
+  return p.manufacturer === "SchmalzHaus" || p.manufacturer === "SchmalzHaus LLC" || (p.vendorId == "04D8" && p.productId == "FD92");
+}
+
+async function listEBBs() {
+  const ports = await NodeSerialPort.list();
+  return ports.filter(isEBB).map((p) => p.path);
+}
+
 async function waitForEbb() {
   while (true) {
-    const ebbs = await EBB.list();
+    const ebbs = await listEBBs();
     if (ebbs.length) {
       return ebbs[0];
     }
     await sleep(5000);
-  }
-}
-
-function drain(port: SerialPort) {
-  while (port.read() != null) {
-    /* do nothing */
   }
 }
 
@@ -274,10 +271,8 @@ async function* ebbs(path?: string) {
       console.log(`Found EBB at ${com}`);
       const port = await tryOpen(com);
       const closed = new Promise((resolve) => {
-        port.once("close", resolve);
-        port.once("error", resolve);
+        port.addEventListener('disconnect', resolve, { once: true })
       });
-      drain(port);
       yield new EBB(port);
       await closed;
       yield null;
@@ -292,11 +287,11 @@ async function* ebbs(path?: string) {
 
 export async function connectEBB(path: string | undefined): Promise<EBB | null> {
   if (path) {
-    return new EBB(new SerialPort(path));
+    return new EBB(new SerialPortSerialPort(path));
   } else {
-    const ebbs = await EBB.list();
+    const ebbs = await listEBBs();
     if (ebbs.length) {
-      return new EBB(new SerialPort(ebbs[0]));
+      return new EBB(new SerialPortSerialPort(ebbs[0]));
     } else {
       return null;
     }
