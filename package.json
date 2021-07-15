@@ -29,7 +29,7 @@
     "deploy": "rimraf dist/ui && IS_WEB=1 webpack --mode=production && gh-pages -d dist/ui",
     "test": "jest"
   },
-  "author": "Jeremy Apthorp <nornagon@nornagon.net>",
+  "author": "Jeremy Rose <nornagon@nornagon.net>",
   "license": "AGPL-3.0-only",
   "devDependencies": {
     "@rehooks/component-size": "^1.0.2",
