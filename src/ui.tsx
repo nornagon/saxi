@@ -620,6 +620,14 @@ function PlanPreview(
       </g>;
     }
   }, [plan, strokeWidth, colorPathsByStrokeOrder]);
+  
+  const linesCount = useMemo(() => {
+    return plan ?
+      // Minus one for the last pen up movement (back to start).
+      // Divide by two to get only pen down movements.
+      (plan.motions.filter(m => m instanceof XYMotion).length - 1) / 2
+      : 0;
+  }, [plan]);
 
   // w/h of svg.
   // first try scaling so that h = area.h. if w < area.w, then ok.
@@ -650,6 +658,12 @@ function PlanPreview(
       setMicroprogress(0);
     };
   }, [state.progress]);
+
+  const showProgressUI = plan && state.progress;
+  // Dividing by 4 because: 
+  // - Progress has PenMotion objects as every second element (divide by 2)
+  // - The rest of XYMotion objects, every second is pen up movement (divide by 2 again)
+  const linesDrawn = Math.floor(state.progress / 4);
 
   let progressIndicator = null;
   if (state.progress != null && plan != null) {
@@ -695,17 +709,24 @@ function PlanPreview(
       strokeDasharray="1,1"
     />
   </g>;
-  return <div className="preview">
-    <svg
-      width={width}
-      height={height}
-      viewBox={`0 0 ${ps.size.x} ${ps.size.y}`}
-    >
-      {memoizedPlanPreview}
-      {margins}
-    </svg>
-    {progressIndicator}
-  </div>;
+  return <>
+    {showProgressUI ?
+      <div className="progress">
+        <div className="progress-bar" style={{width: `${state.progress / plan.motions.length * 100}%`}} />
+        {linesDrawn} / {linesCount} lines drawn
+      </div> : null}
+    <div className="preview">
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${ps.size.x} ${ps.size.y}`}
+      >
+        {memoizedPlanPreview}
+        {margins}
+      </svg>
+      {progressIndicator}
+    </div>
+  </>;
 }
 
 function PlanLoader(
@@ -1086,6 +1107,7 @@ function Root() {
 
   const previewArea = useRef(null);
   const previewSize = useComponentSize(previewArea);
+  const previewPadding = 50;
   const showDragTarget = !plan && !isLoadingFile && !isPlanning;
 
   return <DispatchContext.Provider value={dispatch}>
@@ -1126,7 +1148,7 @@ function Root() {
       <div className="preview-area" ref={previewArea}>
         <PlanPreview
           state={state}
-          previewSize={{width: Math.max(0, previewSize.width - 40), height: Math.max(0, previewSize.height - 40)}}
+          previewSize={{width: Math.max(0, previewSize.width - previewPadding), height: Math.max(0, previewSize.height - previewPadding)}}
           plan={plan}
         />
         <PlanLoader isPlanning={isPlanning} isLoadingFile={isLoadingFile} />

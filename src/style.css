@@ -114,6 +114,21 @@ path {
   font-size: 36px;
 }
 
+.progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 12px;
+}
+
+.progress-bar {
+  background-color: var(--purple-light);
+  height: 3px;
+  margin-bottom: 2px;
+}
+
 .control-panel {
   position: relative;
   flex: 0 0 var(--panel-width);
