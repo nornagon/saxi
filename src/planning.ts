@@ -277,8 +277,8 @@ export class Plan {
   public constructor(motions: Motion[]) {
     this.motions = motions;
   }
-  public duration(): number {
-    return this.motions.map((m) => m.duration()).reduce((a, b) => a + b, 0);
+  public duration(start: number = 0): number {
+    return this.motions.slice(start).map((m) => m.duration()).reduce((a, b) => a + b, 0);
   }
   public motion(i: number) { return this.motions[i]; }
 
