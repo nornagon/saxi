@@ -589,22 +589,22 @@ function PlanStatistics({plan}: {plan: Plan}) {
   </div>;
 }
 
-function TimeLeft({plan, progress, currentLineStartedTime, paused}: {
+function TimeLeft({plan, progress, currentMotionStartedTime, paused}: {
   plan: Plan;
   progress: number | null; 
-  currentLineStartedTime: Date | null;
+  currentMotionStartedTime: Date | null;
   paused: boolean;
 }) {
   const [_, setTime] = useState(new Date());
 
   // Interval that ticks every second to rerender
-  // and recalculate time remaining for long lines
+  // and recalculate time remaining for long motions
   useEffect(() => {
     const interval = setInterval(() => {
       setTime(new Date());
     }, 1000);
 
-    () => {
+    return () => {
       clearInterval(interval);
     }
   }, [setTime])
@@ -613,12 +613,12 @@ function TimeLeft({plan, progress, currentLineStartedTime, paused}: {
     return null;
   }
 
-  const currentLineProgress = (new Date().getTime() - currentLineStartedTime.getTime()) / 1000;
+  const currentMotionTimeSpent = (new Date().getTime() - currentMotionStartedTime.getTime()) / 1000;
   const duration = plan.duration(progress);
 
   return <div className="duration">
-    <div className="time-remaining-label">Time remaining:</div>
-    <div><strong>{formatDuration(duration - currentLineProgress)}</strong></div>
+    <div className="time-remaining-label">Time remaining</div>
+    <div><strong>{formatDuration(duration - currentMotionTimeSpent)}</strong></div>
   </div>;
 }
 
@@ -1117,8 +1117,8 @@ function Root() {
     };
   });
 
-  // Each time new line is started, save the start time
-  const currentLineStartedTime = useMemo(() => {
+  // Each time new motion is started, save the start time
+  const currentMotionStartedTime = useMemo(() => {
     return new Date();
   }, [state.progress, plan, state.paused]);
 
@@ -1160,7 +1160,7 @@ function Root() {
             <TimeLeft 
               plan={plan} 
               progress={state.progress} 
-              currentLineStartedTime={currentLineStartedTime}
+              currentMotionStartedTime={currentMotionStartedTime}
               paused={state.paused}
             />
             <PlotButtons plan={plan} isPlanning={isPlanning} state={state} driver={driver} />
