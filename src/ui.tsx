@@ -589,6 +589,39 @@ function PlanStatistics({plan}: {plan: Plan}) {
   </div>;
 }
 
+function TimeLeft({plan, progress, currentMotionStartedTime, paused}: {
+  plan: Plan;
+  progress: number | null; 
+  currentMotionStartedTime: Date | null;
+  paused: boolean;
+}) {
+  const [_, setTime] = useState(new Date());
+
+  // Interval that ticks every second to rerender
+  // and recalculate time remaining for long motions
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTime(new Date());
+    }, 1000);
+
+    return () => {
+      clearInterval(interval);
+    }
+  }, [setTime])
+
+  if (!plan || !plan.duration || progress === null || paused) {
+    return null;
+  }
+
+  const currentMotionTimeSpent = (new Date().getTime() - currentMotionStartedTime.getTime()) / 1000;
+  const duration = plan.duration(progress);
+
+  return <div className="duration">
+    <div className="time-remaining-label">Time remaining</div>
+    <div><strong>{formatDuration(duration - currentMotionTimeSpent)}</strong></div>
+  </div>;
+}
+
 function PlanPreview(
   {state, previewSize, plan}: {
     state: State;
@@ -1084,6 +1117,11 @@ function Root() {
     };
   });
 
+  // Each time new motion is started, save the start time
+  const currentMotionStartedTime = useMemo(() => {
+    return new Date();
+  }, [state.progress, plan, state.paused]);
+
   const previewArea = useRef(null);
   const previewSize = useComponentSize(previewArea);
   const showDragTarget = !plan && !isLoadingFile && !isPlanning;
@@ -1119,6 +1157,12 @@ function Root() {
           <div className="section-header">plot</div>
           <div className="section-body section-body__plot">
             <PlanStatistics plan={plan} />
+            <TimeLeft 
+              plan={plan} 
+              progress={state.progress} 
+              currentMotionStartedTime={currentMotionStartedTime}
+              paused={state.paused}
+            />
             <PlotButtons plan={plan} isPlanning={isPlanning} state={state} driver={driver} />
           </div>
         </div>
