@@ -236,7 +236,10 @@ class SaxiDriver implements Driver {
   }
 
   public connect() {
-    this.socket = new WebSocket(`ws://${document.location.host}/chat`);
+
+    const websocketProtocol = document.location.protocol === "https:" ? "wss" : "ws";
+    this.socket = new WebSocket(`${websocketProtocol}://${document.location.host}/chat`);
+    
     this.socket.addEventListener("open", () => {
       console.log(`Connected to EBB server.`);
       this.connected = true;
