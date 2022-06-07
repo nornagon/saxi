@@ -1,6 +1,6 @@
 {
   "name": "saxi",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Drive the AxiDraw pen plotter",
   "homepage": "https://github.com/nornagon/saxi",
   "repository": "github:nornagon/saxi",
@@ -70,7 +70,7 @@
     "cors": "^2.8.5",
     "express": "^4.16.4",
     "flatten-svg": "^0.2.1",
-    "optimize-paths": "^1.2.0",
+    "optimize-paths": "^1.2.2",
     "serialport": "^9.2.0",
     "svgdom": "0.0.21",
     "wake-lock": "^0.2.0",
