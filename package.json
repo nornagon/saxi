@@ -1,6 +1,6 @@
 {
   "name": "saxi",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "Drive the AxiDraw pen plotter",
   "homepage": "https://github.com/nornagon/saxi",
   "repository": "github:nornagon/saxi",
