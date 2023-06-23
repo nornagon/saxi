@@ -184,6 +184,11 @@ export function cli(argv: string[]): void {
           type: "number",
           default: defaultPlanOptions.rotateDrawing
         })
+        .option("pause-after", {
+          describe: "Pause plot after X seconds",
+          type: "number",
+          default: defaultPlanOptions.pauseAfter
+        })
         .check((args) => {
           if (args.landscape && args.portrait) {
             throw new Error("Only one of --portrait and --landscape may be specified")
@@ -230,6 +235,7 @@ export function cli(argv: string[]): void {
           minimumPathLength: args["minimum-path-length"],
           pathJoinRadius: args["path-join-radius"],
           pointJoinRadius: args["point-join-radius"],
+          pauseAfter: args["pause-after"],
         }
         const p = replan(linesToVecs(lines), planOptions)
         console.log(`${p.motions.length} motions, estimated duration: ${formatDuration(p.duration())}`)

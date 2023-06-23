@@ -804,9 +804,21 @@ function PlotButtons(
     driver.pause();
   }
   function resume() {
+    if (state.planOptions.pauseAfter && state.planOptions.pauseAfter>0) {
+      setTimeout(() => {
+        console.log('Plot paused again after ', state.planOptions.pauseAfter, ' seconds');
+        driver.pause();
+      }, state.planOptions.pauseAfter * 1000);
+    }
     driver.resume();
   }
   function plot(plan: Plan) {
+    if (state.planOptions.pauseAfter && state.planOptions.pauseAfter>0) {
+      setTimeout(() => {
+        console.log('Plot paused after ', state.planOptions.pauseAfter, ' seconds');
+        driver.pause();
+      }, state.planOptions.pauseAfter * 1000);
+    }
     driver.plot(plan);
   }
 
@@ -953,6 +965,16 @@ function PlanOptions({state}: {state: State}) {
           step="0.01"
           min="0"
           onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {penDownCorneringFactor: Number(e.target.value)}})}
+        />
+      </label>
+      <label>
+        Pause plot after X seconds
+        <input
+          type="number"
+          value={state.planOptions.pauseAfter}
+          step="60"
+          min="0"
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {pauseAfter: Number(e.target.value)}})}
         />
       </label>
       <div className="flex">

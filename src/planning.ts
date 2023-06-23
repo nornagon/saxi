@@ -33,6 +33,7 @@ export interface PlanOptions {
   cropToMargins: boolean;
 
   minimumPathLength: number;
+  pauseAfter: number;
 }
 
 export const defaultPlanOptions: PlanOptions = {
@@ -62,6 +63,7 @@ export const defaultPlanOptions: PlanOptions = {
   cropToMargins: true,
 
   minimumPathLength: 0,
+  pauseAfter: 0,
 };
 
 interface Instant {
