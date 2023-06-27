@@ -69,7 +69,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.16.4",
-    "flatten-svg": "^0.2.1",
+    "flatten-svg": "^0.3.0",
     "optimize-paths": "^1.2.2",
     "serialport": "^9.2.0",
     "svgdom": "0.0.21",
