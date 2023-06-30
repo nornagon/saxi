@@ -9,7 +9,6 @@ self.addEventListener("message", (m) => {
   (self as any).postMessage(serialized);
 });
 
-// eslint-disable-next-line @typescript-eslint/no-object-literal-type-assertion
 export default {} as typeof Worker & {
   new(): Worker;
 };

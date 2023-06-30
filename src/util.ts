@@ -69,8 +69,8 @@ function liangBarsky(aabb: [Vec2, Vec2], seg: [Vec2, Vec2]): Vec2 | null {
   const delta = vsub(b, a)
   const p = [-delta.x, delta.x, -delta.y, delta.y]
   const q = [a.x - lower.x, upper.x - a.x, a.y - lower.y, upper.y - a.y]
-  var u1 = -Infinity
-  var u2 = Infinity
+  let u1 = -Infinity
+  let u2 = Infinity
 
   for (let i = 0; i < 4; i++) {
     if (p[i] == 0) {

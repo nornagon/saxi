@@ -67,6 +67,7 @@ function reducer(state: State, action: any): State {
     case "SET_PAUSED":
       return {...state, paused: action.value};
     case "SET_PATHS":
+      // eslint-disable-next-line no-case-declarations
       const {paths, strokeLayers, selectedStrokeLayers, groupLayers, selectedGroupLayers, layerMode} = action;
       return {...state, paths, groupLayers, strokeLayers, planOptions: {...state.planOptions, selectedStrokeLayers, selectedGroupLayers, layerMode}};
     case "SET_PROGRESS":
@@ -115,7 +116,7 @@ class WebSerialDriver implements Driver {
 
   private _unpaused: Promise<void> = null;
   private _signalUnpause: () => void = null;
-  private _cancelRequested: boolean = false;
+  private _cancelRequested = false;
 
   public static async connect(port?: SerialPort) {
     if (!port)
@@ -558,7 +559,7 @@ function PaperConfig({state}: {state: State}) {
           <img src={rotateDrawingIcon} alt="rotate drawing (degrees)"/>
           <input type="number" min="-90" step="90" max="360" placeholder="0" value={state.planOptions.rotateDrawing}
             onInput={(e) => {
-              let value = (e.target as HTMLInputElement).value;
+              const value = (e.target as HTMLInputElement).value;
               if (Number(value) < 0) { (e.target as HTMLInputElement).value = "270"; }
               if (Number(value) > 270) { (e.target as HTMLInputElement).value = "0"; }
             }}

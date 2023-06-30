@@ -151,7 +151,7 @@ export class Block {
 
   public get vFinal(): number { return Math.max(0, this.vInitial + this.accel * this.duration); }
 
-  public instant(tU: number, dt: number= 0, ds: number= 0): Instant {
+  public instant(tU: number, dt= 0, ds= 0): Instant {
     const t = Math.max(0, Math.min(this.duration, tU));
     const a = this.accel;
     const v = this.vInitial + this.accel * t;
@@ -277,7 +277,7 @@ export class Plan {
   public constructor(motions: Motion[]) {
     this.motions = motions;
   }
-  public duration(start: number = 0): number {
+  public duration(start = 0): number {
     return this.motions.slice(start).map((m) => m.duration()).reduce((a, b) => a + b, 0);
   }
   public motion(i: number) { return this.motions[i]; }
@@ -313,8 +313,8 @@ export class Plan {
 class Segment {
   public p1: Vec2;
   public p2: Vec2;
-  public maxEntryVelocity: number = 0;
-  public entryVelocity: number = 0;
+  public maxEntryVelocity = 0;
+  public entryVelocity = 0;
   public blocks: Block[];
 
   public constructor(p1: Vec2, p2: Vec2) {

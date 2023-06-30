@@ -28,7 +28,7 @@ export function vdot(a: Vec2, b: Vec2): number {
 export function vrot(v: Vec2, c: Vec2, a: number): Vec2 {
   if (a === 0) return v;
 
-  let radians = (Math.PI / 180) * a,
+  const radians = (Math.PI / 180) * a,
     cos = Math.cos(radians),
     sin = Math.sin(radians),
     nx = cos * (v.x - c.x) - sin * (v.y - c.y) + c.x,
