@@ -47,7 +47,7 @@
     "@typescript-eslint/parser": "^5.15.0",
     "color-interpolate": "^1.0.5",
     "colormap": "^2.3.2",
-    "css-loader": "^2.1.1",
+    "css-loader": "^6.0.0",
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.12.4",
     "file-loader": "^3.0.1",
