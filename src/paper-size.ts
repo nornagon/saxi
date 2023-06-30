@@ -1,6 +1,6 @@
 import {Vec2, vmul} from "./vec";
 
-function vround(v: Vec2, digits: number = 2): Vec2 {
+function vround(v: Vec2, digits = 2): Vec2 {
   return { x: Number(v.x.toFixed(digits)), y: Number(v.y.toFixed(digits)) };
 }
 
