@@ -42,7 +42,7 @@
     "@types/serialport": "^8.0.0",
     "@types/w3c-web-serial": "^1.0.2",
     "@types/ws": "8.0.0 - 8.5.4",
-    "@types/yargs": "^12.0.8",
+    "@types/yargs": "^17.0.0",
     "@typescript-eslint/eslint-plugin": "^5.15.0",
     "@typescript-eslint/parser": "^5.15.0",
     "color-interpolate": "^1.0.5",
@@ -76,7 +76,7 @@
     "wake-lock": "^0.2.0",
     "web-streams-polyfill": "^3.0.3",
     "ws": "^8.0.0",
-    "yargs": "^15.4.1"
+    "yargs": "^17.0.0"
   },
   "engines": {
     "node": ">=14.0.0"
