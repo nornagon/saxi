@@ -1,8 +1,8 @@
 import useComponentSize from "@rehooks/component-size";
 import React, { ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useReducer } from "react";
 import ReactDOM from "react-dom";
-import * as interpolator from "color-interpolate"
-import * as colormap from "colormap"
+import interpolator from "color-interpolate"
+import colormap from "colormap"
 
 import {flattenSVG} from "flatten-svg";
 import {PaperSize} from "./paper-size";
