@@ -116,7 +116,7 @@ class WebSerialDriver implements Driver {
 
   private _unpaused: Promise<void> = null;
   private _signalUnpause: () => void = null;
-  private _cancelRequested: boolean = false;
+  private _cancelRequested = false;
 
   public static async connect(port?: SerialPort) {
     if (!port)
