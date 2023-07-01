@@ -35,26 +35,24 @@ export function startServer(port: number, device: string | null = null, enableCo
   wss.on("connection", (ws) => {
     clients.push(ws);
     ws.on("message", (message) => {
-      if (typeof message === "string") {
-        const msg = JSON.parse(message);
-        switch (msg.c) {
-          case "ping":
-            ws.send(JSON.stringify({c: "pong"}));
-            break;
-          case "limp":
-            if (ebb) { ebb.disableMotors(); }
-            break;
-          case "setPenHeight":
-            if (ebb) {
-              (async () => {
-                if (await ebb.supportsSR()) {
-                  await ebb.setServoPowerTimeout(10000, true)
-                }
-                await ebb.setPenHeight(msg.p.height, msg.p.rate);
-              })();
-            }
-            break;
-        }
+      const msg = JSON.parse(message.toString());
+      switch (msg.c) {
+        case "ping":
+          ws.send(JSON.stringify({c: "pong"}));
+          break;
+        case "limp":
+          if (ebb) { ebb.disableMotors(); }
+          break;
+        case "setPenHeight":
+          if (ebb) {
+            (async () => {
+              if (await ebb.supportsSR()) {
+                await ebb.setServoPowerTimeout(10000, true)
+              }
+              await ebb.setPenHeight(msg.p.height, msg.p.rate);
+            })();
+          }
+          break;
       }
     });
 

@@ -250,46 +250,44 @@ class SaxiDriver implements Driver {
       this.pingInterval = window.setInterval(() => this.ping(), 30000);
     });
     this.socket.addEventListener("message", (e: MessageEvent) => {
-      if (typeof e.data === "string") {
-        const msg = JSON.parse(e.data);
-        switch (msg.c) {
-          case "pong": {
-            // nothing
-          } break;
-          case "progress": {
-            if (this.onprogress != null) {
-              this.onprogress(msg.p.motionIdx);
-            }
-          } break;
-          case "cancelled": {
-            if (this.oncancelled != null) {
-              this.oncancelled();
-            }
-          } break;
-          case "finished": {
-            if (this.onfinished != null) {
-              this.onfinished();
-            }
-          } break;
-          case "dev": {
-            if (this.ondevinfo != null) {
-              this.ondevinfo(msg.p);
-            }
-          } break;
-          case "pause": {
-            if (this.onpause != null) {
-              this.onpause(msg.p.paused)
-            }
-          } break;
-          case "plan": {
-            if (this.onplan != null) {
-              this.onplan(Plan.deserialize(msg.p.plan))
-            }
-          } break;
-          default: {
-            console.log("Unknown message from server:", msg);
-          } break;
-        }
+      const msg = JSON.parse(e.data);
+      switch (msg.c) {
+        case "pong": {
+          // nothing
+        } break;
+        case "progress": {
+          if (this.onprogress != null) {
+            this.onprogress(msg.p.motionIdx);
+          }
+        } break;
+        case "cancelled": {
+          if (this.oncancelled != null) {
+            this.oncancelled();
+          }
+        } break;
+        case "finished": {
+          if (this.onfinished != null) {
+            this.onfinished();
+          }
+        } break;
+        case "dev": {
+          if (this.ondevinfo != null) {
+            this.ondevinfo(msg.p);
+          }
+        } break;
+        case "pause": {
+          if (this.onpause != null) {
+            this.onpause(msg.p.paused)
+          }
+        } break;
+        case "plan": {
+          if (this.onplan != null) {
+            this.onplan(Plan.deserialize(msg.p.plan))
+          }
+        } break;
+        default: {
+          console.log("Unknown message from server:", msg);
+        } break;
       }
     });
     this.socket.addEventListener("error", () => {
