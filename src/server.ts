@@ -11,7 +11,7 @@ import { EBB } from "./ebb";
 import { Device, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 
-export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb") {
+export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb"): Promise<http.Server> {
   const app = express();
 
   app.use("/", express.static(path.join(__dirname, "..", "ui")));
@@ -218,7 +218,7 @@ export function startServer(port: number, device: string | null = null, enableCo
     await plotter.postPlot();
   }
 
-  return new Promise((resolve) => {
+  return new Promise<http.Server>((resolve) => {
     server.listen(port, () => {
       async function connect() {
         for await (const d of ebbs(device)) {

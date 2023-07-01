@@ -59,6 +59,7 @@
     "rimraf": "^5.0.0",
     "semver": "^7.5.2",
     "style-loader": "^3.0.0",
+    "supertest": "^6.3.3",
     "ts-jest": "^29.0.0",
     "ts-loader": "^9.0.0",
     "typescript": "~5.0",
@@ -67,6 +68,7 @@
     "worker-loader": "^3.0.0"
   },
   "dependencies": {
+    "@types/supertest": "^2.0.12",
     "cors": "^2.8.5",
     "express": "^4.16.4",
     "flatten-svg": "^0.2.1",
