@@ -1,6 +1,7 @@
 import {Block, Motion, PenMotion, Plan, XYMotion} from "./planning";
 import { RegexParser } from "./regex-transform-stream";
 import {Vec2, vsub} from "./vec";
+import { TextEncoder } from "util";
 
 /** Split d into its fractional and integral parts */
 function modf(d: number): [number, number] {
