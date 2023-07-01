@@ -1,5 +1,4 @@
 import "web-streams-polyfill/es2018"
-import { TextDecoder } from "util"
 export class RegexParser extends TransformStream {
   public constructor(opts: { regex: RegExp }) {
     if (opts.regex === undefined) {
