@@ -102,8 +102,6 @@ export const Axidraw: Device = {
 
   stepsPerMm: 5,
 
-  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
-  // Units: 83ns resolution pwm output.
   // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
   penServoMin: 7500,  // pen down
   penServoMax: 28000, // pen up
@@ -119,11 +117,8 @@ export const AxidrawBrushless: Device = {
 
   stepsPerMm: 5,
 
-  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
-  // Units: 83ns resolution pwm output.
-  // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
-  penServoMin: 7500,  // pen down
-  penServoMax: 28000, // pen up
+  penServoMin: 5400,  // pen down
+  penServoMax: 9600, // pen up
 
   penPctToPos(pct: number): number {
     const t = pct / 100.0;
@@ -131,21 +126,34 @@ export const AxidrawBrushless: Device = {
   }
 };
 
+const penDownProfile = {
+  acceleration: 200 * Axidraw.stepsPerMm,
+  maximumVelocity: 50 * Axidraw.stepsPerMm,
+  corneringFactor: 0.127 * Axidraw.stepsPerMm
+};
+
+const penUpProfile = {
+  acceleration: 400 * Axidraw.stepsPerMm,
+  maximumVelocity: 200 * Axidraw.stepsPerMm,
+  corneringFactor: 0
+};
+
 export const AxidrawFast: ToolingProfile = {
-  penDownProfile: {
-    acceleration: 200 * Axidraw.stepsPerMm,
-    maximumVelocity: 50 * Axidraw.stepsPerMm,
-    corneringFactor: 0.127 * Axidraw.stepsPerMm
-  },
-  penUpProfile: {
-    acceleration: 400 * Axidraw.stepsPerMm,
-    maximumVelocity: 200 * Axidraw.stepsPerMm,
-    corneringFactor: 0
-  },
+  penDownProfile,
+  penUpProfile,
   penUpPos: Axidraw.penPctToPos(50),
   penDownPos: Axidraw.penPctToPos(60),
   penDropDuration: 0.12,
   penLiftDuration: 0.12,
+};
+
+export const AxidrawBrushlessFast: ToolingProfile = {
+  penDownProfile,
+  penUpProfile,
+  penUpPos: Axidraw.penPctToPos(50), // TODO: verify
+  penDownPos: Axidraw.penPctToPos(60),
+  penDropDuration: 0.08,
+  penLiftDuration: 0.08,
 };
 
 export class Block {
