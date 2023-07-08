@@ -1,6 +1,6 @@
 import * as Optimization from "optimize-paths";
 import * as Planning from "./planning";
-import {Device, Plan, PlanOptions} from "./planning";
+import {Axidraw, Plan, PlanOptions} from "./planning";
 import {dedupPoints, scaleToPaper, cropToMargins} from "./util";
 import {Vec2, vmul, vrot} from "./vec";
 
@@ -71,21 +71,21 @@ export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   }
 
   // Convert the paths to units of "steps".
-  paths = paths.map((ps) => ps.map((p) => vmul(p, Device.Axidraw.stepsPerMm)));
+  paths = paths.map((ps) => ps.map((p) => vmul(p, Axidraw.stepsPerMm)));
 
   // And finally, motion planning.
   console.time("planning pen motions");
   const plan = Planning.plan(paths, {
-    penUpPos: Device.Axidraw.penPctToPos(planOptions.penUpHeight),
-    penDownPos: Device.Axidraw.penPctToPos(planOptions.penDownHeight),
+    penUpPos: Axidraw.penPctToPos(planOptions.penUpHeight),
+    penDownPos: Axidraw.penPctToPos(planOptions.penDownHeight),
     penDownProfile: {
-      acceleration: planOptions.penDownAcceleration * Device.Axidraw.stepsPerMm,
-      maximumVelocity: planOptions.penDownMaxVelocity * Device.Axidraw.stepsPerMm,
-      corneringFactor: planOptions.penDownCorneringFactor * Device.Axidraw.stepsPerMm,
+      acceleration: planOptions.penDownAcceleration * Axidraw.stepsPerMm,
+      maximumVelocity: planOptions.penDownMaxVelocity * Axidraw.stepsPerMm,
+      corneringFactor: planOptions.penDownCorneringFactor * Axidraw.stepsPerMm,
     },
     penUpProfile: {
-      acceleration: planOptions.penUpAcceleration * Device.Axidraw.stepsPerMm,
-      maximumVelocity: planOptions.penUpMaxVelocity * Device.Axidraw.stepsPerMm,
+      acceleration: planOptions.penUpAcceleration * Axidraw.stepsPerMm,
+      maximumVelocity: planOptions.penUpMaxVelocity * Axidraw.stepsPerMm,
       corneringFactor: 0,
     },
     penDropDuration: planOptions.penDropDuration,

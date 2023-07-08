@@ -1,4 +1,4 @@
-import {Plan, plan, Device, AxidrawFast, XYMotion, PenMotion} from '../planning';
+import {Plan, plan, Axidraw, AxidrawFast, XYMotion, PenMotion} from '../planning';
 import {Vec2} from '../vec';
 
 describe("plan", () => {
@@ -25,7 +25,7 @@ describe("plan", () => {
     expect(xyMotions(p)).toEqual([
       {from: {x: 0, y: 0}, to: {x: 10, y: 10}, penPos: 0},
       {from: {x: 10, y: 10}, to: {x: 10, y: 10}, penPos: AxidrawFast.penDownPos},
-      {from: {x: 10, y: 10}, to: {x: 0, y: 0}, penPos: Device.Axidraw.penPctToPos(0)},
+      {from: {x: 10, y: 10}, to: {x: 0, y: 0}, penPos: Axidraw.penPctToPos(0)},
     ]);
   });
 
@@ -35,7 +35,7 @@ describe("plan", () => {
     expect(xyMotions(p)).toEqual([
       {from: {x: 0, y: 0}, to: {x: 10, y: 10}, penPos: 0},
       {from: {x: 10, y: 10}, to: {x: 20, y: 10}, penPos: AxidrawFast.penDownPos},
-      {from: {x: 20, y: 10}, to: {x: 0, y: 0}, penPos: Device.Axidraw.penPctToPos(0)},
+      {from: {x: 20, y: 10}, to: {x: 0, y: 0}, penPos: Axidraw.penPctToPos(0)},
     ]);
   });
 
@@ -50,7 +50,7 @@ describe("plan", () => {
       {from: {x: 10, y: 10}, to: {x: 20, y: 10}, penPos: AxidrawFast.penDownPos},
       {from: {x: 20, y: 10}, to: {x: 10, y: 20}, penPos: AxidrawFast.penUpPos},
       {from: {x: 10, y: 20}, to: {x: 20, y: 20}, penPos: AxidrawFast.penDownPos},
-      {from: {x: 20, y: 20}, to: {x: 0, y: 0}, penPos: Device.Axidraw.penPctToPos(0)},
+      {from: {x: 20, y: 20}, to: {x: 0, y: 0}, penPos: Axidraw.penPctToPos(0)},
     ]);
   });
 

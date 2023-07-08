@@ -8,7 +8,7 @@ import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
 import { SerialPortSerialPort } from "./serialport-serialport";
 import { EBB } from "./ebb";
-import { Device, PenMotion, Motion, Plan } from "./planning";
+import { Axidraw, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 
 export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb") {
@@ -158,7 +158,7 @@ export function startServer(port: number, device: string | null = null, enableCo
       await ebb.executeMotion(motion);
     },
     async postCancel(): Promise<void> {
-      await ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000);
+      await ebb.setPenHeight(Axidraw.penPctToPos(0), 1000);
     },
     async postPlot(): Promise<void> {
       await ebb.waitUntilMotorsIdle();

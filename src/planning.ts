@@ -87,36 +87,63 @@ interface ToolingProfile {
   penDropDuration: number;
 }
 
-export const Device = {
-  Axidraw: {
-    stepsPerMm: 5,
+interface Device {
+  stepsPerMm: number;
 
-    // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
-    // Units: 83ns resolution pwm output.
-    // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
-    penServoMin: 7500,  // pen down
-    penServoMax: 28000, // pen up
+  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
+  // Units: 83ns resolution pwm output.
+  penServoMin: number;  // pen down
+  penServoMax: number; // pen up
+  penPctToPos(pct: number): number;
+}
 
-    penPctToPos(pct: number): number {
-      const t = pct / 100.0;
-      return Math.round(this.penServoMin * t + this.penServoMax * (1 - t));
-    }
+export const Axidraw: Device = {
+  // default servo
+
+  stepsPerMm: 5,
+
+  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
+  // Units: 83ns resolution pwm output.
+  // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
+  penServoMin: 7500,  // pen down
+  penServoMax: 28000, // pen up
+
+  penPctToPos(pct: number): number {
+    const t = pct / 100.0;
+    return Math.round(this.penServoMin * t + this.penServoMax * (1 - t));
+  }
+};
+
+export const AxidrawBrushless: Device = {
+  // brushless servo (https://shop.evilmadscientist.com/productsmenu/else?id=56)
+
+  stepsPerMm: 5,
+
+  // Practical min/max that you might ever want the pen servo to go on the AxiDraw (v2)
+  // Units: 83ns resolution pwm output.
+  // Defaults: penup at 12000 (1ms), pendown at 16000 (1.33ms).
+  penServoMin: 7500,  // pen down
+  penServoMax: 28000, // pen up
+
+  penPctToPos(pct: number): number {
+    const t = pct / 100.0;
+    return Math.round(this.penServoMin * t + this.penServoMax * (1 - t));
   }
 };
 
 export const AxidrawFast: ToolingProfile = {
   penDownProfile: {
-    acceleration: 200 * Device.Axidraw.stepsPerMm,
-    maximumVelocity: 50 * Device.Axidraw.stepsPerMm,
-    corneringFactor: 0.127 * Device.Axidraw.stepsPerMm
+    acceleration: 200 * Axidraw.stepsPerMm,
+    maximumVelocity: 50 * Axidraw.stepsPerMm,
+    corneringFactor: 0.127 * Axidraw.stepsPerMm
   },
   penUpProfile: {
-    acceleration: 400 * Device.Axidraw.stepsPerMm,
-    maximumVelocity: 200 * Device.Axidraw.stepsPerMm,
+    acceleration: 400 * Axidraw.stepsPerMm,
+    maximumVelocity: 200 * Axidraw.stepsPerMm,
     corneringFactor: 0
   },
-  penUpPos: Device.Axidraw.penPctToPos(50),
-  penDownPos: Device.Axidraw.penPctToPos(60),
+  penUpPos: Axidraw.penPctToPos(50),
+  penDownPos: Axidraw.penPctToPos(60),
   penDropDuration: 0.12,
   penLiftDuration: 0.12,
 };
@@ -292,9 +319,9 @@ export class Plan {
         // pen-up/pen-down heights in a single place and reference them from
         // the PenMotions. Then we can change them in just one place.
         if (j === this.motions.length - 3) {
-          return new PenMotion(penDownHeight, Device.Axidraw.penPctToPos(0), motion.duration());
+          return new PenMotion(penDownHeight, Axidraw.penPctToPos(0), motion.duration());
         } else if (j === this.motions.length - 1) {
-          return new PenMotion(Device.Axidraw.penPctToPos(0), penUpHeight, motion.duration());
+          return new PenMotion(Axidraw.penPctToPos(0), penUpHeight, motion.duration());
         }
         return (penMotionIndex++ % 2 === 0
           ? new PenMotion(penUpHeight, penDownHeight, motion.duration())
@@ -568,7 +595,7 @@ export function plan(
   // then pick the pen up.
   paths.forEach((p, i) => {
     const m = constantAccelerationPlan(p, profile.penDownProfile);
-    const penUpPos = i === paths.length - 1 ? Device.Axidraw.penPctToPos(penMaxUpPos) : profile.penUpPos;
+    const penUpPos = i === paths.length - 1 ? Axidraw.penPctToPos(penMaxUpPos) : profile.penUpPos;
     motions.push(
       constantAccelerationPlan([curPos, m.p1], profile.penUpProfile),
       new PenMotion(profile.penUpPos, profile.penDownPos, profile.penDropDuration),
@@ -579,6 +606,6 @@ export function plan(
   });
   // finally, move back to (0, 0).
   motions.push(constantAccelerationPlan([curPos, {x: 0, y: 0}], profile.penUpProfile));
-  motions.push(new PenMotion(Device.Axidraw.penPctToPos(penMaxUpPos), profile.penUpPos, profile.penDropDuration));
+  motions.push(new PenMotion(Axidraw.penPctToPos(penMaxUpPos), profile.penUpPos, profile.penDropDuration));
   return new Plan(motions);
 }
