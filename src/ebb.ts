@@ -22,6 +22,8 @@ export class EBB {
 
   private cachedFirmwareVersion: [number, number, number] | undefined = undefined;
 
+  private brushless = false;  // brushless pen servo
+
   public constructor(port: SerialPort) {
     this.port = port;
     this.writer = this.port.writable.getWriter();
@@ -156,7 +158,8 @@ export class EBB {
   }
 
   public setPenHeight(height: number, rate: number, delay = 0): Promise<void> {
-    return this.command(`S2,${height},4,${rate},${delay}`);
+    const pin = this.brushless ? 5 : 4;
+    return this.command(`S2,${height},${pin},${rate},${delay}`);
   }
 
   public lowlevelMove(
