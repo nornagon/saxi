@@ -1190,10 +1190,8 @@ function DragTarget() {
   </div>;
 }
 
-const container = document.getElementById("app");
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-const root = createRoot(container!);
-root.render(<Root />);
+createRoot(document.getElementById("app")!).render(<Root />);
 
 function withSVG<T>(svgString: string, fn: (svg: SVGSVGElement) => T): T {
   const div = document.createElement("div");
