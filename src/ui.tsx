@@ -1,6 +1,6 @@
 import useComponentSize from "@rehooks/component-size";
 import React, { ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useReducer } from "react";
-import ReactDOM from "react-dom";
+import { createRoot } from 'react-dom/client';
 import interpolator from "color-interpolate"
 import colormap from "colormap"
 
@@ -1190,7 +1190,10 @@ function DragTarget() {
   </div>;
 }
 
-ReactDOM.render(<Root />, document.getElementById("app"));
+const container = document.getElementById("app");
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+const root = createRoot(container!);
+root.render(<Root />);
 
 function withSVG<T>(svgString: string, fn: (svg: SVGSVGElement) => T): T {
   const div = document.createElement("div");
