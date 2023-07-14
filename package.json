@@ -36,7 +36,7 @@
     "@types/cors": "^2.8.4",
     "@types/express": "^4.16.1",
     "@types/jest": "^29.0.0",
-    "@types/node": "^10.17.28",
+    "@types/node": "^14.0.0",
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/serialport": "^8.0.0",
@@ -77,6 +77,9 @@
     "web-streams-polyfill": "^3.0.3",
     "ws": "^8.0.0",
     "yargs": "^15.4.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
   },
   "jest": {
     "preset": "ts-jest"
