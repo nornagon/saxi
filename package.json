@@ -40,6 +40,7 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "@types/serialport": "^8.0.0",
+    "@types/supertest": "^2.0.12",
     "@types/w3c-web-serial": "^1.0.2",
     "@types/ws": "8.0.0 - 8.5.4",
     "@types/yargs": "^12.0.8",
@@ -68,7 +69,6 @@
     "worker-loader": "^3.0.0"
   },
   "dependencies": {
-    "@types/supertest": "^2.0.12",
     "cors": "^2.8.5",
     "express": "^4.16.4",
     "flatten-svg": "^0.2.1",
