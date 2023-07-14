@@ -14,7 +14,7 @@ describe('Server Smoke Test', () => {
 let server: Server;
 
   beforeAll(async () => {
-    server = await startServer(9080);
+    server = await startServer(0);
   });
 
   afterAll( () => {
