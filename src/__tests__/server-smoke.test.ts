@@ -1,12 +1,14 @@
-import { startServer } from '../server';
+import { startServer, waitForEbb } from '../server';
 import type { Server } from 'http';
 import request from 'supertest';
 
+jest.mock("../serialport-serialport")
+jest.mock("../ebb")
 jest.mock("../server", () => {
   const original = jest.requireActual("../server");
   return {
       ...original,
-      ebbs: jest.fn()
+      waitForEbb: jest.fn(()=> 'fake-ebb-path'),
   };
 });
 
