@@ -288,11 +288,13 @@ async function* ebbs(path?: string) {
 
 export async function connectEBB(path: string | undefined): Promise<EBB | null> {
   if (path) {
-    return new EBB(new SerialPortSerialPort(path));
+    const port = await tryOpen(path);
+    return new EBB(port);
   } else {
     const ebbs = await listEBBs();
     if (ebbs.length) {
-      return new EBB(new SerialPortSerialPort(ebbs[0]));
+      const port = await tryOpen(ebbs[0]);
+      return new EBB(port);
     } else {
       return null;
     }
