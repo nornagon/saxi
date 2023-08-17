@@ -22,9 +22,15 @@ export class EBB {
 
   private cachedFirmwareVersion: [number, number, number] | undefined = undefined;
 
-  private brushless = false;  // brushless pen servo
+  public brushless = false;  // brushless pen servo
 
-  public constructor(port: SerialPort) {
+  public constructor(port: SerialPort, hardware: string) {
+    console.log(">>>");
+    console.log(hardware);
+    switch (hardware) {
+      case "axidraw": this.brushless = false; break
+      case "axidrawbrushless": this.brushless = true; console.log("brushless"); break
+    }
     this.port = port;
     this.writer = this.port.writable.getWriter();
     this.commandQueue = [];
@@ -156,6 +162,7 @@ export class EBB {
   public async setServoPowerTimeout(timeout: number, power?: boolean) {
     await this.command(`SR,${(timeout * 1000) | 0}${power != null ? `,${power ? 1 : 0}` : ''}`)
   }
+
 
   public setPenHeight(height: number, rate: number, delay = 0): Promise<void> {
     const pin = this.brushless ? 5 : 4;

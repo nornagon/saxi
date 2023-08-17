@@ -42,10 +42,15 @@ export function cli(argv: string[]): void {
         .option("firmware-version", {
           describe: "print the device's firmware version and exit",
           type: "boolean"
+        })
+        .option("hardware", {
+          describe: "select hardware type",
+          default: "Axidraw",
+          type: "string",
         }),
       args => {
         if (args["firmware-version"]) {
-          connectEBB(args.device).then(async (ebb) => {
+          connectEBB(args.device, args["hardware"]).then(async (ebb) => {
             if (!ebb) {
               console.error(`No EBB connected`);
               return process.exit(1);
@@ -55,7 +60,7 @@ export function cli(argv: string[]): void {
             await ebb.close();
           });
         } else {
-          startServer(args.port, args.device, args["enable-cors"], args["max-payload-size"]);
+          startServer(args.port, args.device, args["enable-cors"], args["max-payload-size"], args["hardware"].toLowerCase());
         }
       }
     )

@@ -11,9 +11,10 @@ import { EBB } from "./ebb";
 import { Axidraw, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 
-export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb") {
-  const app = express();
+export function startServer(port: number, device: string | null = null, enableCors = false,
+  maxPayloadSize = "200mb", hardware: string) {
 
+  const app = express();
   app.use("/", express.static(path.join(__dirname, "..", "ui")));
   app.use(express.json({limit: maxPayloadSize}));
   if (enableCors) {
@@ -221,7 +222,7 @@ export function startServer(port: number, device: string | null = null, enableCo
   return new Promise((resolve) => {
     server.listen(port, () => {
       async function connect() {
-        for await (const d of ebbs(device)) {
+        for await (const d of ebbs(hardware, device)) {
           ebb = d;
           broadcast({c: "dev", p: {path: ebb ? /*ebb.port.path*/"/dev/XXX" : null}});
         }
@@ -265,7 +266,7 @@ async function waitForEbb() {
   }
 }
 
-async function* ebbs(path?: string) {
+async function* ebbs(hardware: string, path?: string) {
   while (true) {
     try {
       const com = path || (await waitForEbb());
@@ -274,7 +275,7 @@ async function* ebbs(path?: string) {
       const closed = new Promise((resolve) => {
         port.addEventListener('disconnect', resolve, { once: true })
       });
-      yield new EBB(port);
+      yield new EBB(port, hardware);
       await closed;
       yield null;
       console.error(`Lost connection to EBB, reconnecting...`);
@@ -286,15 +287,15 @@ async function* ebbs(path?: string) {
   }
 }
 
-export async function connectEBB(path: string | undefined): Promise<EBB | null> {
+export async function connectEBB(hardware: string, path?: string): Promise<EBB | null> {
   if (path) {
     const port = await tryOpen(path);
-    return new EBB(port);
+    return new EBB(port, hardware);
   } else {
     const ebbs = await listEBBs();
     if (ebbs.length) {
       const port = await tryOpen(ebbs[0]);
-      return new EBB(port);
+      return new EBB(port, hardware);
     } else {
       return null;
     }

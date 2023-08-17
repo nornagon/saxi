@@ -29,7 +29,7 @@ describe("EBB", () => {
 
   it("firmware version", async () => {
     const port = await openTestPort();
-    const ebb = new EBB(port);
+    const ebb = new EBB(port, 'Axidraw');
     (port as any)._port.binding.emitData(Buffer.from('aoeu\r\n'));
     expect(await ebb.firmwareVersion()).toEqual('aoeu');
     expect((port as any)._port.binding.recording).toEqual(Buffer.from("V\r"));
@@ -37,7 +37,7 @@ describe("EBB", () => {
 
   it("enable motors", async () => {
     const port = await openTestPort();
-    const ebb = new EBB(port);
+    const ebb = new EBB(port, 'Axidraw');
     const oldWrite = (port as any)._port.write;
     (port as any)._port.write = (data: string | Buffer | number[], ...args: any[]) => {
       if (data.toString() === 'V\r')

@@ -127,7 +127,8 @@ class WebSerialDriver implements Driver {
     // (pyserial defaults to 9600)
     await port.open({ baudRate: 9600 })
     const { usbVendorId, usbProductId } = port.getInfo()
-    return new WebSerialDriver(new EBB(port), `${usbVendorId.toString(16).padStart(4, '0')}:${usbProductId.toString(16).padStart(4, '0')}`)
+    // doesn't support brushless yet, only 'axidraw'
+    return new WebSerialDriver(new EBB(port, 'axidraw'), `${usbVendorId.toString(16).padStart(4, '0')}:${usbProductId.toString(16).padStart(4, '0')}`)
   }
 
   private _name: string
