@@ -79,7 +79,7 @@
     "yargs": "^15.4.1"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
   },
   "jest": {
     "preset": "ts-jest"
