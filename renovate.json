@@ -12,8 +12,8 @@
       "automerge": true
     },
     {
-      "matchPackagePatterns": ["webpack"],
-      "groupName": "webpack"
+      "matchPackagePatterns": ["esbuild"],
+      "groupName": "esbuild"
     }
   ]
 }
