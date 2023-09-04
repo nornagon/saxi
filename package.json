@@ -44,17 +44,17 @@
     "@types/react-dom": "^18.0.0",
     "@types/serialport": "^8.0.0",
     "@types/w3c-web-serial": "^1.0.2",
-    "@types/ws": "8.0.0 - 8.5.4",
-    "@types/yargs": "^12.0.8",
-    "@typescript-eslint/eslint-plugin": "^5.15.0",
-    "@typescript-eslint/parser": "^5.15.0",
+    "@types/ws": "8.0.0 - 8.5",
+    "@types/yargs": "^17.0.0",
+    "@typescript-eslint/eslint-plugin": "^5.15.0 || ^6.0.0",
+    "@typescript-eslint/parser": "^5.15.0 || ^6.0.0",
     "color-interpolate": "^1.0.5",
     "colormap": "^2.3.2",
     "esbuild": "^0.19.2",
     "esbuild-plugin-inline-worker": "^0.1.1",
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.12.4",
-    "gh-pages": "^3.2.3",
+    "gh-pages": "^5.0.0 || ^6.0.0",
     "jest": "^29.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
@@ -66,17 +66,17 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.16.4",
-    "flatten-svg": "^0.2.1",
+    "flatten-svg": "^0.3.0",
     "optimize-paths": "^1.2.2",
     "serialport": "^9.2.0",
-    "svgdom": "0.0.21",
+    "svgdom": "0.1.14",
     "wake-lock": "^0.2.0",
     "web-streams-polyfill": "^3.0.3",
     "ws": "^8.0.0",
-    "yargs": "^15.4.1"
+    "yargs": "^17.0.0"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": ">=16.0.0"
   },
   "jest": {
     "preset": "ts-jest"
