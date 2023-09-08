@@ -21,17 +21,21 @@
   "scripts": {
     "prebuild": "npm run lint",
     "lint": "eslint --cache --ext .ts,.tsx src",
-    "build": "tsc && webpack --mode=production",
+    "build": "npm run build:server && npm run build:ui",
+    "build:server": "tsc",
+    "build:ui": "node --experimental-modules build.mjs",
     "prepare": "rimraf dist && npm run build",
     "prestart": "npm run build",
     "start": "node cli.js",
-    "dev": "tsc && webpack --mode=development -w & node cli.js",
-    "deploy": "rimraf dist/ui && IS_WEB=1 webpack --mode=production && gh-pages -d dist/ui",
+    "serve": "npm run build:server && npm start",
+    "dev": "npm run serve & BUILD_MODE=development npm run build:ui",
+    "deploy": "rimraf dist/ui && IS_WEB=1 npm run build:ui && gh-pages --dist dist/ui",
     "test": "jest"
   },
   "author": "Jeremy Rose <nornagon@nornagon.net>",
   "license": "AGPL-3.0-only",
   "devDependencies": {
+    "@craftamap/esbuild-plugin-html": "^0.6.1",
     "@rehooks/component-size": "^1.0.2",
     "@types/cors": "^2.8.4",
     "@types/express": "^4.16.1",
@@ -43,28 +47,22 @@
     "@types/w3c-web-serial": "^1.0.2",
     "@types/ws": "8.0.0 - 8.5",
     "@types/yargs": "^17.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.15.0 || ^6.0.0",
-    "@typescript-eslint/parser": "^5.15.0 || ^6.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.6.0",
+    "@typescript-eslint/parser": "^6.6.0",
     "color-interpolate": "^1.0.5",
     "colormap": "^2.3.2",
-    "css-loader": "^6.0.0",
+    "esbuild": "^0.19.2",
+    "esbuild-plugin-inline-worker": "^0.1.1",
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.12.4",
-    "file-loader": "^6.0.0",
     "gh-pages": "^5.0.0 || ^6.0.0",
-    "html-webpack-plugin": "^5.0.0",
     "jest": "^29.0.0",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "rimraf": "^5.0.0",
     "semver": "^7.5.2",
-    "style-loader": "^3.0.0",
     "ts-jest": "^29.0.0",
-    "ts-loader": "^9.0.0",
-    "typescript": "~5.0 || ~5.2.0",
-    "webpack": "^5.0.0",
-    "webpack-cli": "^5.0.0",
-    "worker-loader": "^3.0.0"
+    "typescript": "~5.0 || ~5.2.0"
   },
   "dependencies": {
     "cors": "^2.8.5",
@@ -87,5 +85,8 @@
   "files": [
     "/dist",
     "cli.js"
-  ]
+  ],
+  "optionalDependencies": {
+    "@esbuild/linux-arm": "^0.19.2"
+  }
 }
