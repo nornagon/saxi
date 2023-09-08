@@ -70,7 +70,7 @@
     "flatten-svg": "^0.3.0",
     "optimize-paths": "^1.2.2",
     "serialport": "^9.2.0",
-    "svgdom": "0.1.14",
+    "svgdom": "0.1.16",
     "wake-lock": "^0.2.0",
     "web-streams-polyfill": "^3.0.3",
     "ws": "^8.0.0",
