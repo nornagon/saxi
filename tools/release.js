@@ -5,7 +5,7 @@ const child_process = require('child_process')
 
 const repositoryRoot = path.join(__dirname, '..')
 const packageJsonPath = path.join(repositoryRoot, 'package.json')
-const package = JSON.parse(fs.readFileSync(packageJsonPath))
+const packageParsed = JSON.parse(fs.readFileSync(packageJsonPath))
 
 const args = require('yargs')
   .strict()
@@ -16,9 +16,9 @@ const args = require('yargs')
   })
   .parse()
 
-const newVersion = semver.inc(package.version, args.level)
+const newVersion = semver.inc(packageParsed.version, args.level)
 
-const newPackageJson = {...package, version: newVersion}
+const newPackageJson = {...packageParsed, version: newVersion}
 fs.writeFileSync(packageJsonPath, JSON.stringify(newPackageJson, null, 2) + "\n")
 
 const packageLockJsonPath = path.join(repositoryRoot, 'package-lock.json')
@@ -37,4 +37,4 @@ git(["add", "package.json", "package-lock.json"])
 git(["commit", "-m", `bump to ${newVersion}`])
 git(["tag", `v${newVersion}`])
 
-console.log(`Bumped version from ${package.version} -> ${newVersion}`)
+console.log(`Bumped version from ${packageParsed.version} -> ${newVersion}`)

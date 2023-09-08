@@ -36,6 +36,10 @@ export class SerialPortSerialPort extends EventEmitter implements SerialPort {
   public readable: ReadableStream<Uint8Array>;
   public writable: WritableStream<Uint8Array>;
 
+  public forget(): Promise<void> {
+    return Promise.resolve()
+  }
+
   public open(options: SerialOptions): Promise<void> {
     const opts: SerialPortOpenOptions = {
       baudRate: options.baudRate,
