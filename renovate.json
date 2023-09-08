@@ -1,0 +1,19 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":automergeLinters",
+    "group:nodeJs"
+  ],
+  "rangeStrategy": "widen",
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "automerge": true
+    },
+    {
+      "matchPackagePatterns": ["esbuild"],
+      "groupName": "esbuild"
+    }
+  ]
+}
