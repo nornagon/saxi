@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
-import { default as NodeSerialPort } from "serialport";
+import { SerialPort as NodeSerialPort } from "serialport";
+import { OpenOptions } from "@serialport/bindings-interface"
 
 function readableStreamFromAsyncIterable<T>(iterable: AsyncIterable<T>) {
   const it = iterable[Symbol.asyncIterator]();
@@ -16,6 +17,9 @@ function readableStreamFromAsyncIterable<T>(iterable: AsyncIterable<T>) {
       await it.throw(reason);
     }
   }, { highWaterMark: 0 });
+}
+interface SerialPortOpenOptions extends Omit<OpenOptions, 'parity'> {
+  parity?: ParityType;
 }
 
 export class SerialPortSerialPort extends EventEmitter implements SerialPort {
@@ -37,8 +41,9 @@ export class SerialPortSerialPort extends EventEmitter implements SerialPort {
   }
 
   public open(options: SerialOptions): Promise<void> {
-    const opts: NodeSerialPort.OpenOptions = {
+    const opts: SerialPortOpenOptions = {
       baudRate: options.baudRate,
+      path: this._path,
     }
     if (options.dataBits != null)
       opts.dataBits = options.dataBits as any
@@ -53,7 +58,7 @@ export class SerialPortSerialPort extends EventEmitter implements SerialPort {
       flowControl?: FlowControlType | undefined;
       */
     return new Promise((resolve, reject) => {
-      this._port = new NodeSerialPort(this._path, opts, (err) => {
+      this._port = new NodeSerialPort(opts, (err: any) => {
         this._port.once('close', () => this.emit('disconnect'))
         if (err) reject(err)
         else {
@@ -66,7 +71,7 @@ export class SerialPortSerialPort extends EventEmitter implements SerialPort {
       this.writable = new WritableStream({
         write: (chunk) => {
           return new Promise((resolve, reject) => {
-            this._port.write(Buffer.from(chunk), (err, _bytesWritten) => {
+            this._port.write(Buffer.from(chunk), (err: Error) => {
               if (err) reject(err)
               else resolve()
               // TODO: check bytesWritten?
@@ -82,7 +87,7 @@ export class SerialPortSerialPort extends EventEmitter implements SerialPort {
         dtr: signals.dataTerminalReady,
         rts: signals.requestToSend,
         brk: signals.break
-      }, (err) => {
+      }, (err: Error) => {
         if (err) reject(err)
         else resolve()
       })
@@ -96,7 +101,7 @@ export class SerialPortSerialPort extends EventEmitter implements SerialPort {
   }
   public close(): Promise<void> {
     return new Promise((resolve, reject) => {
-      this._port.close((err) => {
+      this._port.close((err: Error) => {
         if (err) reject(err)
         else resolve()
       })
