@@ -7,17 +7,23 @@ import { PortInfo } from "@serialport/bindings-interface"
 import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
 import { SerialPortSerialPort } from "./serialport-serialport";
-import { EBB } from "./ebb";
 import { Device, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 import { autoDetect } from '@serialport/bindings-cpp';
-import * as self from './server'  // for mocking
+import * as _self from './server'  // use self-import for test mocking
 
-export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb"): Promise<http.Server> {
-  const app = express();
+import { EBB, Hardware } from './ebb'
 
-  app.use("/", express.static(path.join(__dirname, "..", "ui")));
-  app.use(express.json({limit: maxPayloadSize}));
+type Com = string
+
+const getDeviceInfo = (ebb: EBB | null, com: Com) => {
+  return { com: ebb ? com : null, hardware: ebb?.hardware }
+}
+
+export async function startServer (port: number, hardware: Hardware = 'v3', com: Com = null, enableCors = false, maxPayloadSize = '200mb') {
+  const app = express()
+  app.use('/', express.static(path.join(__dirname, '..', 'ui')))
+  app.use(express.json({ limit: maxPayloadSize }))
   if (enableCors) {
     app.use(cors());
   }
@@ -58,7 +64,8 @@ export function startServer(port: number, device: string | null = null, enableCo
       }
     });
 
-    ws.send(JSON.stringify({c: "dev", p: {path: ebb ? /*ebb.port.path*/"/dev/XXX" : null}}));
+    ws.send(JSON.stringify({c: 'dev', p: getDeviceInfo(ebb, com)}))
+
     ws.send(JSON.stringify({c: "pause", p: {paused: !!unpaused}}));
     if (motionIdx != null) {
       ws.send(JSON.stringify({c: "progress", p: {motionIdx}}));
@@ -163,7 +170,8 @@ export function startServer(port: number, device: string | null = null, enableCo
       await ebb.executeMotion(motion);
     },
     async postCancel(): Promise<void> {
-      await ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000);
+      const device = Device(ebb.hardware)
+      await ebb.setPenHeight(device.penPctToPos(0), 1000);
     },
     async postPlot(): Promise<void> {
       await ebb.waitUntilMotorsIdle();
@@ -225,10 +233,11 @@ export function startServer(port: number, device: string | null = null, enableCo
 
   return new Promise<http.Server>((resolve) => {
     server.listen(port, () => {
-      async function connect() {
-        for await (const d of ebbs(device)) {
-          ebb = d;
-          broadcast({c: "dev", p: {path: ebb ? /*ebb.port.path*/"/dev/XXX" : null}});
+      async function connect () {
+        const devices = ebbs(com, hardware)
+        for await (const device of devices) {
+          ebb = device
+          broadcast({ c: 'dev', p: getDeviceInfo(ebb, com) })
         }
       }
       connect();
@@ -240,9 +249,9 @@ export function startServer(port: number, device: string | null = null, enableCo
   });
 }
 
-async function tryOpen(path: string): Promise<SerialPort> {
-  const port = new SerialPortSerialPort(path);
-  await port.open({baudRate: 9600})
+async function tryOpen (com: Com) {
+  const port = new SerialPortSerialPort(com)
+  await port.open({ baudRate: 9600 })
   return port
 }
 
@@ -260,8 +269,8 @@ async function listEBBs() {
   return ports.filter(isEBB).map((p: { path: any; }) => p.path);
 }
 
-export async function waitForEbb() {
-  // eslint-disable-next-line no-constant-condition
+export async function waitForEbb (): Promise<Com> {
+// eslint-disable-next-line no-constant-condition
   while (true) {
     const ebbs = await listEBBs();
     if (ebbs.length) {
@@ -271,16 +280,16 @@ export async function waitForEbb() {
   }
 }
 
-async function* ebbs(path?: string) {
+async function * ebbs (path?: string, hardware: Hardware = 'v3') {
   while (true) {
     try {
-      const com = path || (await self.waitForEbb());  // use self-import for mocking
-      console.log(`Found EBB at ${com}`);
-      const port = await tryOpen(com);
+      const com: Com = path || (await _self.waitForEbb()) // use self-import for test mocking
+      console.log(`Found EBB at ${com}`)
+      const port = await tryOpen(com)
       const closed = new Promise((resolve) => {
         port.addEventListener('disconnect', resolve, { once: true })
       });
-      yield new EBB(port);
+      yield new EBB(port, hardware);
       await closed;
       yield null;
       console.error(`Lost connection to EBB, reconnecting...`);
@@ -292,17 +301,13 @@ async function* ebbs(path?: string) {
   }
 }
 
-export async function connectEBB(path: string | undefined): Promise<EBB | null> {
-  if (path) {
-    const port = await tryOpen(path);
-    return new EBB(port);
-  } else {
-    const ebbs = await listEBBs();
-    if (ebbs.length) {
-      const port = await tryOpen(ebbs[0]);
-      return new EBB(port);
-    } else {
-      return null;
-    }
+export async function connectEBB (hardware: Hardware = 'v3', device: string | undefined): Promise<EBB | null> {
+  if (!device) {
+    const ebbs = await listEBBs()
+    if (ebbs.length === 0) return null
+    device = ebbs[0]
   }
+
+  const port = await tryOpen(device)
+  return new EBB(port, hardware)
 }
