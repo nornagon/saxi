@@ -17,7 +17,7 @@ import "./style.css";
 import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
 import rotateDrawingIcon from "./icons/rotate-drawing.svg";
-import { EBB } from "./ebb";
+import { EBB, Hardware } from "./ebb";
 
 const defaultVisualizationOptions = {
   penStrokeWidth: 0.5,
@@ -48,13 +48,16 @@ const initialState = {
 };
 
 // Update the initial state with previously persisted settings (if present)
-const persistedPlanOptions = JSON.parse(window.localStorage.getItem("planOptions")) || {};
-initialState.planOptions = {...initialState.planOptions, ...persistedPlanOptions};
+
+const persistedPlanOptions = JSON.parse(window.localStorage.getItem("planOptions") ?? "{}");
+initialState.planOptions = { ...initialState.planOptions, ...persistedPlanOptions };
 initialState.planOptions.paperSize = new PaperSize(initialState.planOptions.paperSize.size);
 
 type State = typeof initialState;
 
-const DispatchContext = React.createContext(null);
+type Dispatcher = React.Dispatch<{ type: string; value: Record<string, any> }>;
+const nullDispatch: Dispatcher = () => null;
+const DispatchContext = React.createContext<Dispatcher>(nullDispatch);
 
 function reducer(state: State, action: any): State {
   switch (action.type) {
@@ -82,6 +85,7 @@ function reducer(state: State, action: any): State {
 
 interface DeviceInfo {
   path: string;
+  hardware: Hardware;
 }
 
 interface Driver {
@@ -118,7 +122,7 @@ class WebSerialDriver implements Driver {
   private _signalUnpause: () => void = null;
   private _cancelRequested = false;
 
-  public static async connect(port?: SerialPort) {
+  public static async connect(port?: SerialPort, hardware: Hardware = 'v3') {
     if (!port)
       port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x04D8, usbProductId: 0xFD92 }] })
     // baudRate ref: https://github.com/evil-mad/plotink/blob/a45739b7d41b74d35c1e933c18949ed44c72de0e/plotink/ebb_serial.py#L281
@@ -127,7 +131,13 @@ class WebSerialDriver implements Driver {
     // (pyserial defaults to 9600)
     await port.open({ baudRate: 9600 })
     const { usbVendorId, usbProductId } = port.getInfo()
-    return new WebSerialDriver(new EBB(port), `${usbVendorId.toString(16).padStart(4, '0')}:${usbProductId.toString(16).padStart(4, '0')}`)
+    const ebb = new EBB(port, hardware)
+
+    const vendorId = usbVendorId?.toString(16).padStart(4, '0')
+    const productId = usbProductId?.toString(16).padStart(4, '0')
+    const name = `${vendorId}:${productId}`
+
+    return new WebSerialDriver(ebb, name)
   }
 
   private _name: string
@@ -168,7 +178,8 @@ class WebSerialDriver implements Driver {
     }
 
     if (this._cancelRequested) {
-      await this.ebb.setPenHeight(Device.Axidraw.penPctToPos(0), 1000);
+      const device = Device(this.ebb.hardware);
+      await this.ebb.setPenHeight(device.penPctToPos(0), 1000);
       if (this.oncancelled) this.oncancelled()
     } else {
       if (this.onfinished) this.onfinished()
@@ -354,10 +365,11 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
       penDownHeight: previousOptions.penDownHeight,
     };
     if (serialize(previousOptions) === serialize(newOptionsWithOldPenHeights)) {
+      const device = Device(newOptions.hardware);
       // The existing plan should be the same except for penup/pendown heights.
       return previousPlan.withPenHeights(
-        Device.Axidraw.penPctToPos(newOptions.penUpHeight),
-        Device.Axidraw.penPctToPos(newOptions.penDownHeight)
+        device.penPctToPos(newOptions.penUpHeight),
+        device.penPctToPos(newOptions.penDownHeight)
       );
     }
   }
@@ -371,7 +383,7 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
       return;
     }
     if (lastPlan.current != null && lastPaths.current === paths) {
-      const rejiggered = attemptRejigger(lastPlanOptions.current, planOptions, lastPlan.current);
+      const rejiggered = attemptRejigger(lastPlanOptions.current ?? defaultPlanOptions, planOptions, lastPlan.current);
       if (rejiggered) {
         setPlan(rejiggered);
         lastPlan.current = rejiggered;
@@ -402,7 +414,7 @@ const usePlan = (paths: Vec2[][] | null, planOptions: PlanOptions) => {
     };
   }, [paths, serialize(planOptions)]);
 
-  return [isPlanning, latestPlan, setPlan];
+  return { isPlanning, plan: latestPlan, setPlan };
 };
 
 const setPaths = (paths: Vec2[][]) => {
@@ -418,17 +430,19 @@ const setPaths = (paths: Vec2[][]) => {
   return {type: "SET_PATHS", paths, groupLayers, strokeLayers, selectedGroupLayers: new Set(groupLayers), selectedStrokeLayers: new Set(strokeLayers), layerMode};
 };
 
-function PenHeight({state, driver}: {state: State; driver: Driver}) {
-  const {penUpHeight, penDownHeight} = state.planOptions;
+function PenHeight({ state, driver }: { state: State; driver: Driver }) {
+  const { penUpHeight, penDownHeight, hardware } = state.planOptions;
   const dispatch = useContext(DispatchContext);
   const setPenUpHeight = (x: number) => dispatch({type: "SET_PLAN_OPTION", value: {penUpHeight: x}});
   const setPenDownHeight = (x: number) => dispatch({type: "SET_PLAN_OPTION", value: {penDownHeight: x}});
+  const device = Device(hardware);
+
   const penUp = () => {
-    const height = Device.Axidraw.penPctToPos(penUpHeight);
+    const height = device.penPctToPos(penUpHeight);
     driver.setPenHeight(height, 1000);
   };
   const penDown = () => {
-    const height = Device.Axidraw.penPctToPos(penDownHeight);
+    const height = device.penPctToPos(penDownHeight);
     driver.setPenHeight(height, 1000);
   };
   return <Fragment>
@@ -455,7 +469,25 @@ function PenHeight({state, driver}: {state: State; driver: Driver}) {
   </Fragment>;
 }
 
-function VisualizationOptions({state}: {state: State}) {
+function HardwareOptions({ state }: { state: State }) {
+  const dispatch = useContext(DispatchContext);
+  const setHardware = (hardware: string) => dispatch({
+    type: "SET_PLAN_OPTION",
+    value: { hardware }
+  });
+  return <div>
+    <label className="flex-checkbox" title="Use brushless upgrade kit pin and power settings">
+      <input
+        type="checkbox"
+        checked={state.planOptions.hardware === 'brushless'}
+        onChange={(e) => setHardware(e.target.checked ? 'brushless' : 'v3')}
+      />
+      brushless
+    </label>
+  </div>;
+}
+
+function VisualizationOptions({ state }: { state: State }) {
   const dispatch = useContext(DispatchContext);
 
   return <>
@@ -632,7 +664,8 @@ function PlanPreview(
   }
 ) {
   const ps = state.planOptions.paperSize;
-  const strokeWidth = state.visualizationOptions.penStrokeWidth * Device.Axidraw.stepsPerMm
+  const device = Device(state.planOptions.hardware);
+  const strokeWidth = state.visualizationOptions.penStrokeWidth * device.stepsPerMm
   const colorPathsByStrokeOrder = state.visualizationOptions.colorPathsByStrokeOrder
   const memoizedPlanPreview = useMemo(() => {
     if (plan) {
@@ -644,7 +677,7 @@ function PlanPreview(
           return m.blocks.map((b) => b.p1).concat([m.p2]);
         } else { return []; }
       }).filter((m) => m.length);
-      return <g transform={`scale(${1 / Device.Axidraw.stepsPerMm})`}>
+      return <g transform={`scale(${1 / device.stepsPerMm})`}>
         {lines.map((line, i) =>
           <path
             key={i}
@@ -686,15 +719,14 @@ function PlanPreview(
     };
   }, [state.progress]);
 
-  let progressIndicator = null;
+  let progressIndicator = <></>;
   if (state.progress != null && plan != null) {
     const motion = plan.motion(state.progress);
     const pos = motion instanceof XYMotion
       ? motion.instant(Math.min(microprogress / 1000, motion.duration())).p
       : (plan.motion(state.progress - 1) as XYMotion).p2;
-    const {stepsPerMm} = Device.Axidraw;
-    const posXMm = pos.x / stepsPerMm;
-    const posYMm = pos.y / stepsPerMm;
+    const posXMm = pos.x / device.stepsPerMm;
+    const posYMm = pos.y / device.stepsPerMm;
     progressIndicator =
       <svg
         width={width * 2}
@@ -1005,16 +1037,23 @@ function PlanOptions({state}: {state: State}) {
   </div>;
 }
 
-function PortSelector({driver, setDriver}: {driver: Driver; setDriver: (d: Driver) => void}) {
+type PortSelectorProps = {
+  driver: Driver | null;
+  setDriver: (driver: Driver) => void;
+  hardware: Hardware;
+}
+
+function PortSelector({ driver, setDriver, hardware }: PortSelectorProps) {
   const [initializing, setInitializing] = useState(false)
   useEffect(() => {
     (async () => {
       try {
         const ports = await navigator.serial.getPorts()
-        if (ports.length > 0) {
-          console.log('connecting to', ports[0])
+        const port = ports[0]
+        if (port) {
+          console.log('connecting to', port)
           // get the first
-          setDriver(await WebSerialDriver.connect(ports[0]))
+          setDriver(await WebSerialDriver.connect(port, hardware))
         }
       } finally {
         setInitializing(false)
@@ -1029,9 +1068,9 @@ function PortSelector({driver, setDriver}: {driver: Driver; setDriver: (d: Drive
         onClick={async () => {
           try {
             const port = await navigator.serial.requestPort({ filters: [{ usbVendorId: 0x04D8, usbProductId: 0xFD92 }] })
-            if (driver)
-              await driver.close()
-            setDriver(await WebSerialDriver.connect(port))
+            // TODO: describe why we close if we already checked that driver is null
+            // await driver?.close()
+            setDriver(await WebSerialDriver.connect(port, hardware))
           } catch (e) {
             alert(`Failed to connect to serial device: ${e.message}`)
             console.error(e)
@@ -1050,7 +1089,7 @@ function Root() {
     IS_WEB ? null as Driver | null : SaxiDriver.connect()
   )
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [isPlanning, plan, setPlan] = usePlan(state.paths, state.planOptions);
+  const { isPlanning, plan, setPlan } = usePlan(state.paths, state.planOptions);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   useEffect(() => {
@@ -1137,12 +1176,13 @@ function Root() {
         <div className={`saxi-title red`} title={state.deviceInfo ? state.deviceInfo.path : null}>
           <span className="red reg">s</span><span className="teal">axi</span>
         </div>
-        {IS_WEB ? <PortSelector driver={driver} setDriver={setDriver} /> : null}
+        {IS_WEB ? <PortSelector driver={driver} setDriver={setDriver} hardware={state.deviceInfo?.hardware ?? 'v3'} /> : null}
         {!state.connected ? <div className="info-disconnected">disconnected</div> : null}
         <div className="section-header">pen</div>
         <div className="section-body">
           <PenHeight state={state} driver={driver} />
           <MotorControl driver={driver} />
+          <HardwareOptions state={state} />
           <ResetToDefaultsButton />
         </div>
         <div className="section-header">paper</div>

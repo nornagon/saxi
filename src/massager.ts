@@ -1,6 +1,5 @@
 import * as Optimization from "optimize-paths";
-import * as Planning from "./planning";
-import {Device, Plan, PlanOptions} from "./planning";
+import {Device, Plan, PlanOptions, plan} from "./planning";
 import {dedupPoints, scaleToPaper, cropToMargins} from "./util";
 import {Vec2, vmul, vrot} from "./vec";
 
@@ -12,6 +11,7 @@ const mmPerSvgUnit = mmPerInch / svgUnitsPerInch
 
 export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   let paths = inPaths;
+  const device = Device(planOptions.hardware)
 
   // Rotate drawing around center of paper to handle plotting portrait drawings
   // along y-axis of plotter
@@ -71,27 +71,27 @@ export function replan(inPaths: Vec2[][], planOptions: PlanOptions): Plan {
   }
 
   // Convert the paths to units of "steps".
-  paths = paths.map((ps) => ps.map((p) => vmul(p, Device.Axidraw.stepsPerMm)));
+  paths = paths.map((ps) => ps.map((p) => vmul(p, device.stepsPerMm)))
 
   // And finally, motion planning.
-  console.time("planning pen motions");
-  const plan = Planning.plan(paths, {
-    penUpPos: Device.Axidraw.penPctToPos(planOptions.penUpHeight),
-    penDownPos: Device.Axidraw.penPctToPos(planOptions.penDownHeight),
+  console.time('planning pen motions')
+  const theplan = plan(paths, {
+    penUpPos: device.penPctToPos(planOptions.penUpHeight),
+    penDownPos: device.penPctToPos(planOptions.penDownHeight),
     penDownProfile: {
-      acceleration: planOptions.penDownAcceleration * Device.Axidraw.stepsPerMm,
-      maximumVelocity: planOptions.penDownMaxVelocity * Device.Axidraw.stepsPerMm,
-      corneringFactor: planOptions.penDownCorneringFactor * Device.Axidraw.stepsPerMm,
+      acceleration: planOptions.penDownAcceleration * device.stepsPerMm,
+      maximumVelocity: planOptions.penDownMaxVelocity * device.stepsPerMm,
+      corneringFactor: planOptions.penDownCorneringFactor * device.stepsPerMm
     },
     penUpProfile: {
-      acceleration: planOptions.penUpAcceleration * Device.Axidraw.stepsPerMm,
-      maximumVelocity: planOptions.penUpMaxVelocity * Device.Axidraw.stepsPerMm,
-      corneringFactor: 0,
+      acceleration: planOptions.penUpAcceleration * device.stepsPerMm,
+      maximumVelocity: planOptions.penUpMaxVelocity * device.stepsPerMm,
+      corneringFactor: 0
     },
     penDropDuration: planOptions.penDropDuration,
     penLiftDuration: planOptions.penLiftDuration,
   });
   console.timeEnd("planning pen motions");
 
-  return plan;
+  return theplan
 }
