@@ -7,6 +7,7 @@ const buildOptions = {
   bundle: true,
   platform: 'browser',
   target: 'es2020',
+  minify: true,
   sourcemap: true,
   metafile: true,
   logLevel: 'debug',
