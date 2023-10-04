@@ -11,8 +11,9 @@ import { EBB } from "./ebb";
 import { Device, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 import { autoDetect } from '@serialport/bindings-cpp';
+import * as self from './server'  // for mocking
 
-export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb") {
+export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb"): Promise<http.Server> {
   const app = express();
 
   app.use("/", express.static(path.join(__dirname, "..", "ui")));
@@ -222,7 +223,7 @@ export function startServer(port: number, device: string | null = null, enableCo
     await plotter.postPlot();
   }
 
-  return new Promise((resolve) => {
+  return new Promise<http.Server>((resolve) => {
     server.listen(port, () => {
       async function connect() {
         for await (const d of ebbs(device)) {
@@ -259,8 +260,8 @@ async function listEBBs() {
   return ports.filter(isEBB).map((p: { path: any; }) => p.path);
 }
 
-async function waitForEbb() {
-// eslint-disable-next-line no-constant-condition
+export async function waitForEbb() {
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const ebbs = await listEBBs();
     if (ebbs.length) {
@@ -273,7 +274,7 @@ async function waitForEbb() {
 async function* ebbs(path?: string) {
   while (true) {
     try {
-      const com = path || (await waitForEbb());
+      const com = path || (await self.waitForEbb());  // use self-import for mocking
       console.log(`Found EBB at ${com}`);
       const port = await tryOpen(com);
       const closed = new Promise((resolve) => {
