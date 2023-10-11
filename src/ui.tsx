@@ -179,7 +179,12 @@ class WebSerialDriver implements Driver {
 
     if (this._cancelRequested) {
       const device = Device(this.ebb.hardware);
-      await this.ebb.setPenHeight(device.penPctToPos(0), 1000);
+      if (!penIsUp) {
+        // Move to the pen up position, or 50% if no position was found
+        const penMotion = plan.motions.find((motion): motion is PenMotion => motion instanceof PenMotion)
+        const penUpPosition = penMotion ? Math.max(penMotion.initialPos, penMotion.finalPos) :  device.penPctToPos(50)
+        await this.ebb.setPenHeight(penUpPosition, 1000);
+      }
       if (this.oncancelled) this.oncancelled()
     } else {
       if (this.onfinished) this.onfinished()
