@@ -119,7 +119,7 @@ path {
   flex: 0 0 var(--panel-width);
   width: var(--panel-width);
   background-color: white;
-  overflow-y: scroll;
+  overflow-y: auto;
 
   box-shadow: 3px 3px 15px rgba(0, 0, 0, 0.2);
 }
@@ -150,7 +150,7 @@ path {
 
 .section-header {
   margin-bottom: 1rem;
-  padding: 1rem 0;
+  padding: 0.5rem 0;
   border-bottom: 1px solid var(--purple-light);
   font-size: 18px;
   font-weight: 900;
@@ -163,6 +163,11 @@ path {
 }
 
 /* INPUTS */
+
+form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
 
 label {
   font-size: 10px;
@@ -281,7 +286,6 @@ select[multiple]:focus option:checked {
 .flex-checkbox {
   display: flex;
   align-items: center;
-  justify-content: center;
   margin-bottom: 0.5rem;
 }
 
@@ -315,7 +319,7 @@ select[multiple]:focus option:checked {
 }
 
 .layer-select {
-  height: 50px;
+  height: 100px;
   background-color: white;
   border: 1px solid var(--purple);
   color: var(--purple);

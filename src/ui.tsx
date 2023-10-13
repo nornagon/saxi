@@ -855,40 +855,42 @@ function ResetToDefaultsButton() {
 function PlanOptions({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
   return <div>
-    <label className="flex-checkbox" title="Re-order paths to minimize pen-up travel time">
-      <input
-        type="checkbox"
-        checked={state.planOptions.sortPaths}
-        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: !!e.target.checked}})}
-      />
-      sort paths
-    </label>
-    <label className="flex-checkbox" title="Re-scale and position the image to fit on the page">
-      <input
-        type="checkbox"
-        checked={state.planOptions.fitPage}
-        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {fitPage: !!e.target.checked}})}
-      />
-      fit page
-    </label>
-    {!state.planOptions.fitPage ?
-      <label className="flex-checkbox" title="Remove lines that fall outside the margins">
+    <form>
+      <label className="flex-checkbox" title="Re-order paths to minimize pen-up travel time">
         <input
           type="checkbox"
-          checked={state.planOptions.cropToMargins}
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {cropToMargins: !!e.target.checked}})}
+          checked={state.planOptions.sortPaths}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: !!e.target.checked}})}
         />
-        crop to margins
+        sort paths
       </label>
-      : null}
-    <label className="flex-checkbox" title="Split into layers according to group ID, instead of stroke">
-      <input
-        type="checkbox"
-        checked={state.planOptions.layerMode === 'group'}
-        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {layerMode: e.target.checked ? 'group' : 'stroke'}})}
-      />
-      layer by group
-    </label>
+      <label className="flex-checkbox" title="Split into layers according to group ID, instead of stroke">
+        <input
+          type="checkbox"
+          checked={state.planOptions.layerMode === 'group'}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {layerMode: e.target.checked ? 'group' : 'stroke'}})}
+        />
+        layer by group
+      </label>
+      <label className="flex-checkbox" title="Re-scale and position the image to fit on the page">
+        <input
+          type="checkbox"
+          checked={state.planOptions.fitPage}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {fitPage: !!e.target.checked}})}
+        />
+        fit page
+      </label>
+      {!state.planOptions.fitPage ?
+        <label className="flex-checkbox" title="Remove lines that fall outside the margins">
+          <input
+            type="checkbox"
+            checked={state.planOptions.cropToMargins}
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {cropToMargins: !!e.target.checked}})}
+          />
+          crop to margins
+        </label>
+        : null}
+    </form>
     <div className="horizontal-labels">
 
       <label title="point-joining radius (mm)" >
