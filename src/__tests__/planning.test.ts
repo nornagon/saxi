@@ -2,11 +2,10 @@ import {Plan, plan, Device, AxidrawFast, XYMotion, PenMotion, defaultPlanOptions
 import {Vec2} from '../vec';
 
 describe("plan", () => {
-  const device = Device.Axidraw
+  const device = Device()
   const positions = {
     up: AxidrawFast.penUpPos,
-    down: AxidrawFast.penDownPos,
-    zero: device.penPctToPos(0)
+    down: AxidrawFast.penDownPos
   }
   it.skip("handles an empty input", () => {
     expect(plan([], AxidrawFast)).toEqual(new Plan([]))
@@ -31,7 +30,7 @@ describe("plan", () => {
     expect(xyMotions(p)).toEqual([
       {from: {x: 0, y: 0}, to: {x: 10, y: 10}, penPos: 0},
       {from: {x: 10, y: 10}, to: {x: 10, y: 10}, penPos: positions.down},
-      {from: {x: 10, y: 10}, to: {x: 0, y: 0}, penPos: positions.zero},
+      {from: {x: 10, y: 10}, to: {x: 0, y: 0}, penPos: positions.up},
     ]);
   });
 
@@ -41,7 +40,7 @@ describe("plan", () => {
     expect(xyMotions(p)).toEqual([
       {from: {x: 0, y: 0}, to: {x: 10, y: 10}, penPos: 0},
       {from: {x: 10, y: 10}, to: {x: 20, y: 10}, penPos: positions.down},
-      {from: {x: 20, y: 10}, to: {x: 0, y: 0}, penPos: positions.zero},
+      {from: {x: 20, y: 10}, to: {x: 0, y: 0}, penPos: positions.up},
     ]);
   });
 
@@ -56,7 +55,7 @@ describe("plan", () => {
       {from: {x: 10, y: 10}, to: {x: 20, y: 10}, penPos: positions.down},
       {from: {x: 20, y: 10}, to: {x: 10, y: 20}, penPos: positions.up},
       {from: {x: 10, y: 20}, to: {x: 20, y: 20}, penPos: positions.down},
-      {from: {x: 20, y: 20}, to: {x: 0, y: 0}, penPos: positions.zero},
+      {from: {x: 20, y: 20}, to: {x: 0, y: 0}, penPos: positions.up},
     ]);
   });
 
