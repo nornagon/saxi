@@ -240,7 +240,7 @@ class SaxiDriver implements Driver {
 
     const websocketProtocol = document.location.protocol === "https:" ? "wss" : "ws";
     this.socket = new WebSocket(`${websocketProtocol}://${document.location.host}/chat`);
-    
+
     this.socket.addEventListener("open", () => {
       console.log(`Connected to EBB server.`);
       this.connected = true;
@@ -1043,9 +1043,18 @@ function PortSelector({driver, setDriver}: {driver: Driver; setDriver: (d: Drive
 }
 
 function Root() {
-  const [driver, setDriver] = useState(
-    IS_WEB ? null as Driver | null : SaxiDriver.connect()
-  )
+  const [driver, setDriver] = useState<Driver | null>(null);
+  const [isDriverConnected, setIsDriverConnected] = useState(false);
+  useEffect(() => {
+    if (isDriverConnected) return
+    if (IS_WEB) {
+      setDriver(null as Driver);
+    } else {
+      setDriver(SaxiDriver.connect());
+    }
+    setIsDriverConnected(true);
+  }, [isDriverConnected]);
+
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPlanning, plan, setPlan] = usePlan(state.paths, state.planOptions);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
@@ -1117,7 +1126,7 @@ function Root() {
       document.body.removeEventListener("dragleave", ondragleave);
       document.removeEventListener("paste", onpaste);
     };
-  });
+  }, []);
 
   // Each time new motion is started, save the start time
   const currentMotionStartedTime = useMemo(() => {
