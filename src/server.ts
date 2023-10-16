@@ -170,7 +170,8 @@ export async function startServer (port: number, hardware: Hardware = 'v3', com:
     },
     async postCancel(): Promise<void> {
       const device = Device(ebb.hardware)
-      await ebb.setPenHeight(device.penPctToPos(0), 1000);
+      // TODO: switch to pen up position
+      await ebb.setPenHeight(device.penPctToPos(50), 1000);
     },
     async postPlot(): Promise<void> {
       await ebb.waitUntilMotorsIdle();
