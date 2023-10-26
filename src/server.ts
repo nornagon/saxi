@@ -85,6 +85,7 @@ export function startServer(port: number, device: string | null = null, enableCo
 
       const begin = Date.now();
       let wakeLock: any;
+      // The wake-lock module is macOS-only.
       if (process.platform === 'darwin') {
         try {
           wakeLock = new WakeLock("saxi plotting");
