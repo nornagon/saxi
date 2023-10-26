@@ -4,7 +4,6 @@ declare module '*.svg' {
 }
 declare module 'svgdom';
 declare module 'wake-lock';
-declare module '@serialport/binding-mock';
 declare module 'color-interpolate';
 declare module 'colormap';
 
