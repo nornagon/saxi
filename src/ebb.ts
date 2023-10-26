@@ -24,7 +24,7 @@ export class EBB {
 
   public constructor(port: SerialPort) {
     this.port = port;
-    this.writer = this.port.writable.getWriter()
+    this.writer = this.port.writable.getWriter();
     this.commandQueue = [];
     this.readableClosed = port.readable
       .pipeThrough(new RegexParser({ regex: /[\r\n]+/ }))
@@ -66,7 +66,7 @@ export class EBB {
   }
 
   public async close(): Promise<void> {
-    throw new Error("TODO")
+    return await this.port.close()
   }
 
   private write(str: string): Promise<void> {
