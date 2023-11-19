@@ -9,11 +9,14 @@ function modf(d: number): [number, number] {
   return [fracPart, intPart];
 }
 
+export type Hardware = 'v3' | 'brushless'
+
 export class EBB {
   public port: SerialPort;
   private commandQueue: Iterator<any, any, Buffer>[];
   private writer: WritableStreamDefaultWriter<Uint8Array>;
   private readableClosed: Promise<void>
+  public hardware: Hardware
 
   private microsteppingMode = 0;
 
@@ -22,7 +25,8 @@ export class EBB {
 
   private cachedFirmwareVersion: [number, number, number] | undefined = undefined;
 
-  public constructor(port: SerialPort) {
+  public constructor (port: SerialPort, hardware: Hardware = 'v3') {
+    this.hardware = hardware
     this.port = port;
     this.writer = this.port.writable.getWriter();
     this.commandQueue = [];
@@ -155,8 +159,10 @@ export class EBB {
     await this.command(`SR,${(timeout * 1000) | 0}${power != null ? `,${power ? 1 : 0}` : ''}`)
   }
 
-  public setPenHeight(height: number, rate: number, delay = 0): Promise<void> {
-    return this.command(`S2,${height},4,${rate},${delay}`);
+  // https://evil-mad.github.io/EggBot/ebb.html#S2 General RC Servo Output
+  public async setPenHeight (height: number, rate: number, delay = 0): Promise<void> {
+    const output_pin = this.hardware === 'v3' ? 4 : 5
+    return await this.command(`S2,${height},${output_pin},${rate},${delay}`)
   }
 
   public lowlevelMove(

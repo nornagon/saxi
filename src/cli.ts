@@ -6,8 +6,9 @@ import * as fs from "fs";
 import {flattenSVG} from "flatten-svg";
 import { Vec2 } from "./vec";
 import { formatDuration } from "./util";
-import { PlanOptions, defaultPlanOptions } from "./planning";
+import { Device, PlanOptions, defaultPlanOptions } from "./planning";
 import { PaperSize } from "./paper-size";
+import { Hardware } from "./ebb";
 
 function parseSvg(svg: string) {
   const window = new Window
@@ -16,49 +17,19 @@ function parseSvg(svg: string) {
 }
 
 export function cli(argv: string[]): void {
-  yargs.strict()
-    .option("device", {
-      alias: "d",
-      describe: "device to connect to",
-      type: "string"
+  yargs
+    .strict()
+    .option('hardware', {
+      describe: 'select hardware type',
+      choices: ['v3', 'brushless'] as const,
+      default: 'v3',
+      coerce: value => value as Hardware
     })
-    .command('$0', 'run the saxi web server',
-      yargs => yargs
-        .option("port", {
-          alias: "p",
-          default: Number(process.env.PORT || 9080),
-          describe: "TCP port on which to listen",
-          type: "number"
-        })
-        .option("enable-cors", {
-          describe: "enable cross-origin resource sharing (CORS)",
-          type: "boolean"
-        })
-        .option("max-payload-size", {
-          describe: "maximum payload size to accept",
-          default: "200 mb",
-          type: "string"
-        })
-        .option("firmware-version", {
-          describe: "print the device's firmware version and exit",
-          type: "boolean"
-        }),
-      args => {
-        if (args["firmware-version"]) {
-          connectEBB(args.device).then(async (ebb) => {
-            if (!ebb) {
-              console.error(`No EBB connected`);
-              return process.exit(1);
-            }
-            const fwv = await ebb.firmwareVersion();
-            console.log(fwv);
-            await ebb.close();
-          });
-        } else {
-          startServer(args.port, args.device, args["enable-cors"], args["max-payload-size"]);
-        }
-      }
-    )
+    .option('device', {
+      alias: 'd',
+      describe: 'device to connect to',
+      type: 'string'
+    })
     .command('plot <file>', 'plot an svg, then exit',
       yargs => yargs
         .positional("file", {
@@ -205,6 +176,7 @@ export function cli(argv: string[]): void {
         const planOptions: PlanOptions = {
           paperSize,
           marginMm: args.margin,
+          hardware: args.hardware,
 
           selectedGroupLayers: new Set([]), // TODO
           selectedStrokeLayers: new Set([]), // TODO
@@ -234,7 +206,7 @@ export function cli(argv: string[]): void {
         const p = replan(linesToVecs(lines), planOptions)
         console.log(`${p.motions.length} motions, estimated duration: ${formatDuration(p.duration())}`)
         console.log("connecting to plotter...")
-        const ebb = await connectEBB(args.device)
+        const ebb = await connectEBB(args.hardware, args.device)
         if (!ebb) {
           console.error("Couldn't connect to device!")
           process.exit(1)
@@ -246,7 +218,44 @@ export function cli(argv: string[]): void {
         await ebb.close()
       }
     )
-    .parse(argv);
+    .command('pen [percent]', 'put the pen to [percent]', yargs => yargs
+      .positional('percent', { type: 'number', description: 'percent height between 0 and 100', required: true})
+      .check(args => args.percent >= 0 && args.percent <= 100),
+    async args => {
+      console.log('connecting to plotter...')
+      const ebb = await connectEBB(args.hardware, args.device)
+      if (!ebb) {
+        console.error("Couldn't connect to device!")
+        process.exit(1)
+      }
+      const device = Device(ebb.hardware)
+      await ebb.setPenHeight(device.penPctToPos(args.percent), 1000)
+
+      console.log(`moving to ${args.percent}%...`)
+      await ebb.close()
+    })
+    .command('$0', 'run the saxi web server',
+      args => args
+        .option('port', {
+          alias: 'p',
+          describe: 'TCP port on which to listen',
+          default: 9080,
+          type: 'number',
+        })
+        .option('enable-cors', {
+          describe: 'enable cross-origin resource sharing (CORS)',
+          default: false,
+          type: 'boolean',
+        })
+        .option('max-payload-size', {
+          describe: 'maximum payload size to accept',
+          default: '200mb',
+        }),
+      args => {
+        startServer(args.port, args.hardware, args.device, args['enable-cors'], args['max-payload-size'])
+      }
+    )
+    .parse(argv)
 }
 
 function linesToVecs(lines: any[]): Vec2[][] {
