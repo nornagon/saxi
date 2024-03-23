@@ -51,7 +51,7 @@
     "@typescript-eslint/parser": "^6.6.0 || ^7.0.0",
     "color-interpolate": "^1.0.5",
     "colormap": "^2.3.2",
-    "esbuild": "^0.19.2",
+    "esbuild": "^0.19.2 || ^0.20.0",
     "esbuild-plugin-inline-worker": "^0.1.1",
     "eslint": "^8.0.0",
     "eslint-plugin-react": "^7.12.4",
@@ -88,6 +88,6 @@
     "cli.js"
   ],
   "optionalDependencies": {
-    "@esbuild/linux-arm": "^0.19.2"
+    "@esbuild/linux-arm": "^0.19.2 || ^0.20.0"
   }
 }
