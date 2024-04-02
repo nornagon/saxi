@@ -3,13 +3,14 @@ import "web-streams-polyfill/es2018"
 import express from "express";
 import http from "http";
 import path from "path";
-import { default as NodeSerialPort } from "serialport";
+import { PortInfo } from "@serialport/bindings-interface"
 import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
 import { SerialPortSerialPort } from "./serialport-serialport";
 import { EBB } from "./ebb";
 import { Device, PenMotion, Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
+import { autoDetect } from '@serialport/bindings-cpp';
 
 export function startServer(port: number, device: string | null = null, enableCors = false, maxPayloadSize = "200mb") {
   const app = express();
@@ -85,10 +86,13 @@ export function startServer(port: number, device: string | null = null, enableCo
 
       const begin = Date.now();
       let wakeLock: any;
-      try {
-        wakeLock = new WakeLock("saxi plotting");
-      } catch (e) {
-        console.warn("Couldn't acquire wake lock. Ensure your machine does not sleep during plotting");
+      // The wake-lock module is macOS-only.
+      if (process.platform === 'darwin') {
+        try {
+          wakeLock = new WakeLock("saxi plotting");
+        } catch (e) {
+          console.warn("Couldn't acquire wake lock. Ensure your machine does not sleep during plotting");
+        }
       }
 
       try {
@@ -245,13 +249,14 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function isEBB(p: NodeSerialPort.PortInfo): boolean {
+function isEBB(p: PortInfo): boolean {
   return p.manufacturer === "SchmalzHaus" || p.manufacturer === "SchmalzHaus LLC" || (p.vendorId == "04D8" && p.productId == "FD92");
 }
 
 async function listEBBs() {
-  const ports = await NodeSerialPort.list();
-  return ports.filter(isEBB).map((p) => p.path);
+  const Binding = autoDetect()
+  const ports = await Binding.list();
+  return ports.filter(isEBB).map((p: { path: any; }) => p.path);
 }
 
 async function waitForEbb() {
@@ -288,11 +293,13 @@ async function* ebbs(path?: string) {
 
 export async function connectEBB(path: string | undefined): Promise<EBB | null> {
   if (path) {
-    return new EBB(new SerialPortSerialPort(path));
+    const port = await tryOpen(path);
+    return new EBB(port);
   } else {
     const ebbs = await listEBBs();
     if (ebbs.length) {
-      return new EBB(new SerialPortSerialPort(ebbs[0]));
+      const port = await tryOpen(ebbs[0]);
+      return new EBB(port);
     } else {
       return null;
     }

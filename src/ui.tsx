@@ -240,7 +240,7 @@ class SaxiDriver implements Driver {
 
     const websocketProtocol = document.location.protocol === "https:" ? "wss" : "ws";
     this.socket = new WebSocket(`${websocketProtocol}://${document.location.host}/chat`);
-    
+
     this.socket.addEventListener("open", () => {
       console.log(`Connected to EBB server.`);
       this.connected = true;
@@ -781,6 +781,7 @@ function LayerSelector({state}: {state: State}) {
         value={[...selectedLayers]}
         onChange={layersChanged}
         size={3}
+        disabled={state.progress != null}
       >
         {layers.map((layer) => <option key={layer}>{layer}</option>)}
       </select>
@@ -854,40 +855,42 @@ function ResetToDefaultsButton() {
 function PlanOptions({state}: {state: State}) {
   const dispatch = useContext(DispatchContext);
   return <div>
-    <label className="flex-checkbox" title="Re-order paths to minimize pen-up travel time">
-      <input
-        type="checkbox"
-        checked={state.planOptions.sortPaths}
-        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: !!e.target.checked}})}
-      />
-      sort paths
-    </label>
-    <label className="flex-checkbox" title="Re-scale and position the image to fit on the page">
-      <input
-        type="checkbox"
-        checked={state.planOptions.fitPage}
-        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {fitPage: !!e.target.checked}})}
-      />
-      fit page
-    </label>
-    {!state.planOptions.fitPage ?
-      <label className="flex-checkbox" title="Remove lines that fall outside the margins">
+    <form>
+      <label className="flex-checkbox" title="Re-order paths to minimize pen-up travel time">
         <input
           type="checkbox"
-          checked={state.planOptions.cropToMargins}
-          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {cropToMargins: !!e.target.checked}})}
+          checked={state.planOptions.sortPaths}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {sortPaths: !!e.target.checked}})}
         />
-        crop to margins
+        sort paths
       </label>
-      : null}
-    <label className="flex-checkbox" title="Split into layers according to group ID, instead of stroke">
-      <input
-        type="checkbox"
-        checked={state.planOptions.layerMode === 'group'}
-        onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {layerMode: e.target.checked ? 'group' : 'stroke'}})}
-      />
-      layer by group
-    </label>
+      <label className="flex-checkbox" title="Split into layers according to group ID, instead of stroke">
+        <input
+          type="checkbox"
+          checked={state.planOptions.layerMode === 'group'}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {layerMode: e.target.checked ? 'group' : 'stroke'}})}
+        />
+        layer by group
+      </label>
+      <label className="flex-checkbox" title="Re-scale and position the image to fit on the page">
+        <input
+          type="checkbox"
+          checked={state.planOptions.fitPage}
+          onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {fitPage: !!e.target.checked}})}
+        />
+        fit page
+      </label>
+      {!state.planOptions.fitPage ?
+        <label className="flex-checkbox" title="Remove lines that fall outside the margins">
+          <input
+            type="checkbox"
+            checked={state.planOptions.cropToMargins}
+            onChange={(e) => dispatch({type: "SET_PLAN_OPTION", value: {cropToMargins: !!e.target.checked}})}
+          />
+          crop to margins
+        </label>
+        : null}
+    </form>
     <div className="horizontal-labels">
 
       <label title="point-joining radius (mm)" >
@@ -1043,9 +1046,18 @@ function PortSelector({driver, setDriver}: {driver: Driver; setDriver: (d: Drive
 }
 
 function Root() {
-  const [driver, setDriver] = useState(
-    IS_WEB ? null as Driver | null : SaxiDriver.connect()
-  )
+  const [driver, setDriver] = useState<Driver | null>(null);
+  const [isDriverConnected, setIsDriverConnected] = useState(false);
+  useEffect(() => {
+    if (isDriverConnected) return
+    if (IS_WEB) {
+      setDriver(null as Driver);
+    } else {
+      setDriver(SaxiDriver.connect());
+    }
+    setIsDriverConnected(true);
+  }, [isDriverConnected]);
+
   const [state, dispatch] = useReducer(reducer, initialState);
   const [isPlanning, plan, setPlan] = usePlan(state.paths, state.planOptions);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
@@ -1117,7 +1129,7 @@ function Root() {
       document.body.removeEventListener("dragleave", ondragleave);
       document.removeEventListener("paste", onpaste);
     };
-  });
+  }, []);
 
   // Each time new motion is started, save the start time
   const currentMotionStartedTime = useMemo(() => {
