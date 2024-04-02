@@ -34,6 +34,30 @@ $ sudo apt-get install -y nodejs
 
 and then proceed as above :) If you connect to the raspberry pi over ssh, you might want to run the `saxi` server inside a tmux or screen session to have it stay running even if your ssh session disconnects.
 
+If you want `saxi` to run at boot on the Pi you can use a systemd unit file and enable the service:
+
+```bash
+sudo tee /lib/systemd/system/saxi.service <<EOF
+[Unit]
+Description=Saxi
+After=network.target
+
+[Service]
+ExecStart=saxi
+Restart=always
+User=pi
+
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl enable saxi.service
+```
+
+To watch the logs while it is running, use:
+```bash
+journalctl -f -u saxi
+```
+
 #### Raspberry Pi Zero OTG
 
 ![Pi Zero on an AxiDraw with a Y-shaped USB cable](docs/pi-zero.jpg)
