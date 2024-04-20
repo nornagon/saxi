@@ -1,6 +1,6 @@
-import {Block, Motion, PenMotion, Plan, XYMotion} from "./planning";
+import {type Block, type Motion, PenMotion, type Plan, XYMotion} from "./planning";
 import { RegexParser } from "./regex-transform-stream";
-import {Vec2, vsub} from "./vec";
+import {type Vec2, vsub} from "./vec";
 
 /** Split d into its fractional and integral parts */
 function modf(d: number): [number, number] {
@@ -27,6 +27,7 @@ export class EBB {
 
   public constructor (port: SerialPort, hardware: Hardware = 'v3') {
     this.hardware = hardware
+    console.log(this.hardware)
     this.port = port;
     this.writer = this.port.writable.getWriter();
     this.commandQueue = [];
@@ -71,6 +72,10 @@ export class EBB {
 
   public async close(): Promise<void> {
     return await this.port.close()
+  }
+
+  public changeHardware(hardware: Hardware) {
+    this.hardware = hardware;
   }
 
   private write(str: string): Promise<void> {

@@ -1,6 +1,6 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import { SerialPort as NodeSerialPort } from "serialport";
-import { OpenOptions } from "@serialport/bindings-interface"
+import type { OpenOptions } from "@serialport/bindings-interface"
 
 function readableStreamFromAsyncIterable<T>(iterable: AsyncIterable<T>) {
   const it = iterable[Symbol.asyncIterator]();

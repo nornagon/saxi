@@ -1,5 +1,5 @@
-import {PaperSize} from "./paper-size";
-import {vadd, Vec2, vlen2, vmul, vsub} from "./vec";
+import type {PaperSize} from "./paper-size";
+import {vadd, type Vec2, vlen2, vmul, vsub} from "./vec";
 
 /** Format a smallish duration in 2h30m15s form */
 export function formatDuration(seconds: number): string {

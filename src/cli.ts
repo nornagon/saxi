@@ -2,13 +2,13 @@ import yargs from "yargs";
 import {connectEBB, startServer} from "./server";
 import {replan} from "./massager";
 import {Window} from "svgdom";
-import * as fs from "fs";
+import * as fs from "node:fs";
 import {flattenSVG} from "flatten-svg";
-import { Vec2 } from "./vec";
+import type { Vec2 } from "./vec";
 import { formatDuration } from "./util";
-import { Device, PlanOptions, defaultPlanOptions } from "./planning";
+import { Device, type PlanOptions, defaultPlanOptions } from "./planning";
 import { PaperSize } from "./paper-size";
-import { Hardware } from "./ebb";
+import type { Hardware } from "./ebb";
 
 function parseSvg(svg: string) {
   const window = new Window

@@ -22,7 +22,6 @@ declare module 'flatten-svg/svg-to-paths' {
     groupId?: string;
   }
   export function flattenSVG(svg: SVGElement, options?: Partial<Options>): Line[];
-  export {};
 
 }
 declare module 'flatten-svg' {

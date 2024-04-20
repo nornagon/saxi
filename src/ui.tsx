@@ -1,14 +1,14 @@
 import useComponentSize from "@rehooks/component-size";
-import React, { ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useReducer } from "react";
+import React, { type ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useReducer } from "react";
 import { createRoot } from 'react-dom/client';
 import interpolator from "color-interpolate"
 import colormap from "colormap"
 
 import {flattenSVG} from "flatten-svg";
 import {PaperSize} from "./paper-size";
-import {Device, Plan, PlanOptions, defaultPlanOptions, XYMotion, PenMotion} from "./planning";
+import {Device, Plan, type PlanOptions, defaultPlanOptions, XYMotion, PenMotion} from "./planning";
 import {formatDuration} from "./util";
-import {Vec2} from "./vec";
+import type {Vec2} from "./vec";
 
 import PlanWorker from "./plan.worker";
 
@@ -17,7 +17,7 @@ import "./style.css";
 import pathJoinRadiusIcon from "./icons/path-joining radius.svg";
 import pointJoinRadiusIcon from "./icons/point-joining radius.svg";
 import rotateDrawingIcon from "./icons/rotate-drawing.svg";
-import { EBB, Hardware } from "./ebb";
+import { EBB, type Hardware } from "./ebb";
 
 const defaultVisualizationOptions = {
   penStrokeWidth: 0.5,
@@ -258,7 +258,7 @@ class SaxiDriver implements Driver {
     this.socket = new WebSocket(`${websocketProtocol}://${document.location.host}/chat`);
 
     this.socket.addEventListener("open", () => {
-      console.log(`Connected to EBB server.`);
+      console.log("Connected to EBB server.");
       this.connected = true;
       if (this.onconnectionchange) {
         this.onconnectionchange(true);
@@ -310,7 +310,7 @@ class SaxiDriver implements Driver {
       // TODO: something
     });
     this.socket.addEventListener("close", () => {
-      console.log(`Disconnected from EBB server, reconnecting in 5 seconds.`);
+      console.log("Disconnected from EBB server, reconnecting in 5 seconds.");
       window.clearInterval(this.pingInterval);
       this.pingInterval = null;
       this.connected = false;

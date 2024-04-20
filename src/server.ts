@@ -1,18 +1,18 @@
 import cors from "cors";
 import "web-streams-polyfill/es2018"
 import express from "express";
-import http from "http";
-import path from "path";
-import { PortInfo } from "@serialport/bindings-interface"
+import http from "node:http";
+import path from "node:path";
+import type { PortInfo } from "@serialport/bindings-interface"
 import { WakeLock } from "wake-lock";
 import WebSocket from "ws";
 import { SerialPortSerialPort } from "./serialport-serialport";
-import { Device, PenMotion, Motion, Plan } from "./planning";
+import { Device, PenMotion, type Motion, Plan } from "./planning";
 import { formatDuration } from "./util";
 import { autoDetect } from '@serialport/bindings-cpp';
 import * as _self from './server'  // use self-import for test mocking
 
-import { EBB, Hardware } from './ebb'
+import { EBB, type Hardware } from './ebb'
 
 type Com = string
 
@@ -293,10 +293,10 @@ async function * ebbs (path?: string, hardware: Hardware = 'v3') {
       yield new EBB(port, hardware);
       await closed;
       yield null;
-      console.error(`Lost connection to EBB, reconnecting...`);
+      console.error("Lost connection to EBB, reconnecting...");
     } catch (e) {
       console.error(`Error connecting to EBB: ${e.message}`);
-      console.error(`Retrying in 5 seconds...`);
+      console.error("Retrying in 5 seconds...");
       await sleep(5000);
     }
   }
