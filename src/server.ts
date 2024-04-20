@@ -1,5 +1,5 @@
 import cors from "cors";
-import "web-streams-polyfill/es2018"
+import "web-streams-polyfill/polyfill"
 import express from "express";
 import http from "node:http";
 import path from "node:path";
