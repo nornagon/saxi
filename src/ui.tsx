@@ -1,3 +1,6 @@
+/**
+ * Front-end for plotter app.
+ */
 import useComponentSize from "@rehooks/component-size";
 import React, { type ChangeEvent, Fragment, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useReducer } from "react";
 import { createRoot } from 'react-dom/client';
@@ -59,6 +62,12 @@ type Dispatcher = React.Dispatch<{ type: string; value: Record<string, any> }>;
 const nullDispatch: Dispatcher = () => null;
 const DispatchContext = React.createContext<Dispatcher>(nullDispatch);
 
+/**
+ * State machine reducer. Handle actions that update the state.
+ * @param state Previous state
+ * @param action Message
+ * @returns New state
+ */
 function reducer(state: State, action: any): State {
   switch (action.type) {
     case "SET_PLAN_OPTION":

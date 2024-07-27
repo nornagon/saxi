@@ -66,6 +66,10 @@ export const defaultPlanOptions: PlanOptions = {
   hardware: 'v3'
 }
 
+/**
+ * An abstraction of all motion variables at a single point in time
+ * (t), including position (p), distance (s), velocity (v), and acceleration (a).
+ */
 interface Instant {
   t: number;
   p: Vec2;
@@ -163,6 +167,10 @@ export const AxidrawBrushlessFast: ToolingProfile = {
   penLiftDuration: 0.08
 }
 
+/**
+ * A Motion Block, where the pen moves with a constant acceleration, from
+ * a start to an end point, and initial to final velocity.
+ */
 export class Block {
   public static deserialize(o: any): Block {
     return new Block(o.accel, o.duration, o.vInitial, o.p1, o.p2);
@@ -193,6 +201,13 @@ export class Block {
 
   public get vFinal(): number { return Math.max(0, this.vInitial + this.accel * this.duration); }
 
+  /**
+   * Compute the motion at a given time.
+   * @param tU The time at which to compute the motion.
+   * @param dt The time offset.
+   * @param ds The distance offset.
+   * @return The motion at time tU.
+   **/
   public instant(tU: number, dt= 0, ds= 0): Instant {
     const t = Math.max(0, Math.min(this.duration, tU));
     const a = this.accel;
@@ -218,6 +233,9 @@ export interface Motion {
   serialize(): any;
 }
 
+/**
+ * Pen Motion accross a single axis, represented as an initial positon, final position and duration.
+ */
 export class PenMotion implements Motion {
   public static deserialize(o: any): PenMotion {
     return new PenMotion(o.initialPos, o.finalPos, o.duration);
@@ -247,6 +265,13 @@ export class PenMotion implements Motion {
   }
 }
 
+/**
+ * Scan an array, applying an operation to each element - accumulating the result.
+ * @param a - The array to scan.
+ * @param z - The initial value (zero).
+ * @param op - The binary operation to apply.
+ * @returns An array of partially accumulated values - running total.
+ */
 function scanLeft<A, B>(a: A[], z: B, op: (b: B, a: A) => B): B[] {
   const b: B[] = [];
   let acc = z;
@@ -255,9 +280,16 @@ function scanLeft<A, B>(a: A[], z: B, op: (b: B, a: A) => B): B[] {
   return b;
 }
 
-function sortedIndex<T>(array: T[], obj: T) {
+/**
+ * Find insertion point of en element on a sorted array, to keep the order.
+ * @param array 
+ * @param obj 
+ * @returns 
+ */
+function sortedIndex<T>(array: T[], obj: T): number {
   let low = 0;
   let high = array.length;
+  // binary search
   while (low < high) {
     const mid = Math.floor((low + high) / 2);
     if (array[mid] < obj) { low = mid + 1; } else { high = mid; }
@@ -265,6 +297,9 @@ function sortedIndex<T>(array: T[], obj: T) {
   return low;
 }
 
+/**
+ * XY Motion - across a 2 dimensioanl plane, represented as a list of blocks.
+ */
 export class XYMotion implements Motion {
   public static deserialize(o: any): XYMotion {
     return new XYMotion(o.blocks.map(Block.deserialize));
@@ -276,7 +311,9 @@ export class XYMotion implements Motion {
 
   public constructor(blocks: Block[]) {
     this.blocks = blocks;
+    // time progression
     this.ts = scanLeft(blocks.map((b) => b.duration), 0, (a, b) => a + b).slice(0, -1);
+    // distance progression
     this.ss = scanLeft(blocks.map((b) => b.distance), 0, (a, b) => a + b).slice(0, -1);
   }
 
@@ -306,6 +343,10 @@ export class XYMotion implements Motion {
   }
 }
 
+/**
+ * Plotting Plan.
+ * Contains a list of pen motions.
+ */
 export class Plan {
   public static deserialize(o: any): Plan {
     return new Plan(o.motions.map((m: any) => {

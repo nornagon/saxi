@@ -1,3 +1,10 @@
+/**
+ * Backend web server for controlling the EBB.
+ * Serves both the front end UI as static files - made with React, and backend
+ * API for controlling the EBB.
+ * Keeps open web sockets to the front end for real-time updates.
+ */
+
 import cors from "cors";
 import "web-streams-polyfill/polyfill"
 import express from "express";
@@ -16,10 +23,25 @@ import { EBB, type Hardware } from './ebb'
 
 type Com = string
 
+/**
+ * Shorthand for getting the device info, either EBB or com port.
+ * @param ebb 
+ * @param com 
+ * @returns 
+ */
 const getDeviceInfo = (ebb: EBB | null, com: Com) => {
   return { com: ebb ? com : null, hardware: ebb?.hardware }
 }
 
+/**
+ * Start the express server.
+ * @param port 
+ * @param hardware 
+ * @param com 
+ * @param enableCors 
+ * @param maxPayloadSize 
+ * @returns 
+ */
 export async function startServer (port: number, hardware: Hardware = 'v3', com: Com = null, enableCors = false, maxPayloadSize = '200mb') {
   const app = express()
   app.use('/', express.static(path.join(__dirname, '..', 'ui')))
@@ -27,7 +49,7 @@ export async function startServer (port: number, hardware: Hardware = 'v3', com:
   if (enableCors) {
     app.use(cors());
   }
-
+  // Web and Socket server
   const server = http.createServer(app);
   const wss = new WebSocket.Server({ server });
 
@@ -64,6 +86,7 @@ export async function startServer (port: number, hardware: Hardware = 'v3', com:
       }
     });
 
+    // send starting params to clients
     ws.send(JSON.stringify({c: 'dev', p: getDeviceInfo(ebb, com)}))
 
     ws.send(JSON.stringify({c: "pause", p: {paused: !!unpaused}}));
@@ -79,6 +102,9 @@ export async function startServer (port: number, hardware: Hardware = 'v3', com:
     });
   });
 
+  /**
+   * /plot POST endpoint. Receive a plan on the POST body, and execute it.
+   */
   app.post("/plot", async (req, res) => {
     if (plotting) {
       console.log("Received plot request, but a plot is already in progress!")
