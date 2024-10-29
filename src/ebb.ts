@@ -51,8 +51,6 @@ export class EBB {
           }
         }
       }))
-    this.firmwareVersion().then((version) => console.log("Firmware version", version));
-    this.queryGeneral(); // clear the button press status on startup
   }
 
   private get stepMultiplier() {
