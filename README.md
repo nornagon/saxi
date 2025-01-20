@@ -1,6 +1,9 @@
 # saxi
 ##### make plot good
 
+### ARCHIVED
+!! NOTE !! Development has moved to https://github.com/alexrudd2/saxi
+
 saxi is a tool for interacting with the [AxiDraw
 drawing machine](https://axidraw.com/) by Evil Mad Scientist. It comes with an
 easy-to-use interface, and is exactingly precise.
