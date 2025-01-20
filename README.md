@@ -28,12 +28,19 @@ Connecting to EBB on /dev/tty.usbmodem1461
 If you encounter an `EACCES` error when installing the package globally, see [Resolving EACCES permissions errors when installing packages globally](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
 
 #### Raspberry Pi
-To install saxi on a Raspberry Pi, first install node.js if you haven't already:
 
-```
-$ curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -
-$ sudo apt-get install -y nodejs
-```
+
+To install saxi on a Raspberry Pi 2+, first install node.js
+
+    sudo apt install --yes nodejs
+
+If you are on a Raspberry Pi Zero or Raspberry Pi, you will need to download an [unofficial armv6l build](https://github.com/nodejs/unofficial-builds)
+
+    wget https://unofficial-builds.nodejs.org/download/release/v20.8.1/node-v20.8.1-linux-armv6l.tar.xz
+    tar xf node-v20.8.1-armv6l.tar.xz
+    export PATH=$PATH:$PWD/node-v20.8.1-linux-armv6l/
+    echo "export PATH=\$PATH:$PWD/node-v20.8.1-linux-armv6l" >> ~/.profile
+
 
 and then proceed as above :) If you connect to the raspberry pi over ssh, you might want to run the `saxi` server inside a tmux or screen session to have it stay running even if your ssh session disconnects.
 
