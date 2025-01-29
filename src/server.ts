@@ -279,7 +279,10 @@ async function* ebbs(path?: string) {
       const closed = new Promise((resolve) => {
         port.addEventListener('disconnect', resolve, { once: true })
       });
-      yield new EBB(port);
+      const ebb = new EBB(port);
+      ebb.firmwareVersion().then((version) => console.log("Firmware version", version));
+      ebb.queryGeneral(); // clear the button press status on startup
+      yield ebb;
       await closed;
       yield null;
       console.error(`Lost connection to EBB, reconnecting...`);

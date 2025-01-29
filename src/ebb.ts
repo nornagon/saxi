@@ -108,6 +108,11 @@ export class EBB {
     }
   }
 
+  /** Send the new General Query command to get limit switch, button and fifo status */
+  public async queryGeneral(): Promise<number> {
+    return parseInt(await this.query("QG"), 16);
+  }
+
   /** Send a raw command to the EBB and expect a single "OK" line in return. */
   public async command(cmd: string): Promise<void> {
     try {
@@ -230,6 +235,24 @@ export class EBB {
     }
   }
 
+  public async sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  public async checkButtonAndWait() {
+    if (!await this.queryButton())
+      return;
+    console.log("BUTTON PAUSED");
+    // wait for the button to have been released, then pressed again
+    // is there a better way to do this?
+    while (await this.queryButton()) await this.sleep(100);
+    console.log("BUTTON released");
+    while (!await this.queryButton()) await this.sleep(100);
+    console.log("BUTTON RESTART");
+    while (await this.queryButton()) await this.sleep(100);
+    console.log("BUTTON released");
+  }
+
   public async executeBlockWithLM(block: Block): Promise<void> {
     const [errX, stepsX] = modf((block.p2.x - block.p1.x) * this.stepMultiplier + this.error.x);
     const [errY, stepsY] = modf((block.p2.y - block.p1.y) * this.stepMultiplier + this.error.y);
@@ -251,6 +274,7 @@ export class EBB {
    */
   public async executeXYMotionWithLM(plan: XYMotion): Promise<void> {
     for (const block of plan.blocks) {
+      await this.checkButtonAndWait();
       await this.executeBlockWithLM(block);
     }
   }
@@ -381,7 +405,8 @@ export class EBB {
   }
 
   public async queryButton(): Promise<boolean> {
-    return (await this.queryM("QB"))[0] === "1";
+    const resp = await this.queryGeneral();
+    return (resp & (1<<5)) != 0;
   }
 
   /**
